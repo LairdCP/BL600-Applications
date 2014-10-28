@@ -1,0 +1,66 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+'// +++++  which consists of all characters up to the first . and excluding it ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// This function lists all the entries in the bonding database
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim addr$           '// address of bonded peer
+dim exInfo          '// key exhange info
+dim idx             '// index
+dim rc
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Equivalent to main() in C
+'//******************************************************************************
+
+print "\nTotal number of bonded devices           = ";SysInfo(2009)
+print "\nTotal number of bonded devices with IRK  = ";SysInfo(2010)
+print "\nTotal number of bonded devices with CSRK = ";SysInfo(2011)
+dim nCount
+nCount = SysInfo(2009) - 1
+for idx = 0 to nCount
+  rc = BleBondMngrGetInfo(idx,addr$,exInfo)
+  print "\n"
+  if rc != 0 then
+    print "-- call to BleBondMngrGetInfo() failed with ";integer.h' rc
+  else
+    print strhexize$(addr$),integer.h' exinfo
+  endif
+next
+
+
+
+
+'//------------------------------------------------------------------------------
+'// Wait for a synchronous event.
+'// An application can have multiple <WaitEvent> statements
+'//------------------------------------------------------------------------------
+'//waitevent  // PURPOSELY COMMENTED OUT

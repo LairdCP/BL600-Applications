@@ -1,0 +1,59 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+'// +++++  which consists of all characters up to the first . and excluding it ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// Debugging and Tracing Routines - BEFORE includes
+'//
+'// Have either the following
+'//
+'//  #define ENABLE_DEBUG_PRINTS                  1
+'//
+'// or
+'//
+'//  #define ENABLE_DEBUG_PRINTS                  0
+'//
+'// in the source file that includes this
+'//
+'//******************************************************************************
+
+'//#include "lib\debugging.routines.sblib"
+
+'//==============================================================================
+'//==============================================================================
+sub AssertResCode(byval rc as integer,byval tag as integer)
+  if (ENABLE_DEBUG_PRINTS!=0) && (rc!=0) then
+    print "Failed with ";integer.h' rc;" at tag ";tag;"\n"
+  endif
+endsub
+
+'//==============================================================================
+'//==============================================================================
+sub DbgMsg(byval msg$ as string)
+  if (ENABLE_DEBUG_PRINTS!=0) then
+    print msg$;"\n"
+  endif
+endsub
+
+'//==============================================================================
+'//==============================================================================
+sub DbgMsgVal(byval msg$ as string, byval vl as integer)
+  if (ENABLE_DEBUG_PRINTS!=0) then
+    print msg$;" ";vl;"\n"
+  endif
+endsub
+
+'//==============================================================================
+'//==============================================================================
+sub DbgPrnAdvReport(byref rp$ as string)
+  if (ENABLE_DEBUG_PRINTS!=0) then
+    print "Rpt=";strhexize$(rp$);"\n"
+  endif
+endsub
+
+

@@ -1,0 +1,492 @@
+//******************************************************************************
+// Laird Technologies (c) 2013
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// +++++                                                                      ++
+// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+// +++++  which consists of all characters up to the first . and excluding it ++
+// +++++                                                                      ++
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// Template Profile
+//
+//   ####################################
+//   #                                  #
+//   #  Search for TODO to make changes #
+//   #                                  #
+//   ####################################
+//
+//
+//   When you run the app you will get a > command prompt to allow you to submit
+//   commands. Search in this document for ..
+//   //#CMD#//
+//
+//******************************************************************************
+
+//******************************************************************************
+// Definitions
+//******************************************************************************
+
+#define NUM_OF_PARAMS           (8)
+
+//******************************************************************************
+// Register Error Handler as early as possible
+//******************************************************************************
+sub HandlerOnErr()
+  if (ENABLE_DEBUG_PRINTS!=0) then
+    print "\n OnErr - ";GetLastError();"\n"
+  endif
+endsub
+onerror next HandlerOnErr
+
+//******************************************************************************
+// Library Import
+//******************************************************************************
+
+//******************************************************************************
+// Debugging resource after libs
+//******************************************************************************
+
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
+
+dim flags                   //bit 0 set if startup called
+dim rc
+dim stRsp$ as string        //Uart rx data is stored here
+
+dim ok$,er$,pr$
+dim mnltk                   //min size of ltk
+dim mxltk                   //max size of ltk
+dim advFlags                //value for flags AD
+dim adTag                   //AD Tag
+dim adDta$                  //AD Data
+
+dim i[NUM_OF_PARAMS],s$[NUM_OF_PARAMS]            // index 0 used for return values
+
+dim urtcmd$                 //cmd line from uart
+dim tkn$,tlen               //used by command parser
+dim hConnLast               //most recent connection handle
+
+//******************************************************************************
+// Initialisse Global Variable
+//******************************************************************************
+
+
+flags  = 0
+
+ok$    = "\nOK"
+er$    = "\nERROR "
+pr$    = "\r\n>"
+
+mnltk    = MIN_LTK_SIZE
+mxltk    = MAX_LTK_SIZE
+advFlags = DISCOVERY_MODE    //can be changed via 'fg' command
+
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
+
+//==============================================================================
+// This is called to start things off just before the waitevent at the end of
+// the file
+//==============================================================================
+sub OnStartup()
+  InitSecurityMngr(PAIRING_IOCAPABILITY,MIN_LTK_SIZE, MAX_LTK_SIZE)
+  InitGapService()
+  InitDisService()
+  //mark so that we now startup has occured
+  flags = flags | 0x1
+  print "\nStartup OK"
+endsub
+
+
+//==============================================================================
+//==============================================================================
+sub UartRsp(rsp as integer)
+  if rsp == 0 then
+    print ok$;pr$
+  else
+    print er$;integer.h' rsp;pr$
+  endif
+endsub
+
+//==============================================================================
+//==============================================================================
+sub SetDeviceName(st$ as string,wr as integer)
+  rc = BleGapSvcInit(st$,wr,APPEARANCE,MIN_CONN_INTERVAL,MAX_CONN_INTERVAL,CONN_SUP_TIMEOUT,SLAVE_LATENCY)
+  AssertResCode(rc,2020)
+endsub
+
+//==============================================================================
+//==============================================================================
+sub ShowConnParms(nCtx as integer)
+  dim intrvl,sprvto,slat
+  rc= BleGetCurConnParms(nCtx,intrvl,sprvto,slat)
+  AssertResCode(rc,1240)
+  if rc==0 then
+    DbgMsgVal("Conn Interval",intrvl)
+    DbgMsgVal("Conn Supervision Timeout",sprvto)
+    DbgMsgVal("Conn Slave Latency",slat)
+  endif
+endsub
+
+//==============================================================================
+//==============================================================================
+function _StartAdv(adv as integer) as integer
+  dim rc
+  rc=StartAdverts(adv)
+  if rc==0 then
+    print "\nStart Adverts, type=";adv
+  endif
+endfunc rc
+
+//==============================================================================
+//==============================================================================
+function _StopAdv() as integer
+  dim rc
+  rc=StopAdverts()
+  if rc==0 then
+    print "\nStop Adverts"
+  endif
+endfunc rc
+
+//==============================================================================
+// for = Y returns -1 and val==Y
+// for ? returns 0
+// otherwise return 1
+//==============================================================================
+function ParseType0(byref val as integer)
+  rc = 1
+  tlen = ExtractStrToken(urtcmd$,tkn$)
+  if tlen > 0 then
+    if strcmp(tkn$,"?")==0 then
+      rc=0
+    elseif strcmp(tkn$,"=")==0 then
+      tlen = ExtractIntToken(urtcmd$,val)
+      if tlen > 0 then
+        rc=-1
+      endif
+    endif
+  endif
+endfunc rc
+
+//-------------------------------------------------------------------------
+//#CMD#// startup                  - start the ble
+//-------------------------------------------------------------------------
+function _StartUp()
+  if (flags & 0x1) then
+    exitfunc 2
+  endif
+  OnStartup()  
+endfunc 0
+
+//-------------------------------------------------------------------------
+//#CMD#// txpower = nnnn           - set tx power to nnnn
+//#CMD#// txpower ?                - get tx power
+//-------------------------------------------------------------------------
+function _TxPower()
+  rc = ParseType0(i[1])
+  select rc
+  case 0
+    print "\nCurrent TxPower = ";SysInfo(2008)
+    rc=0
+  case -1
+    print "\nSet TxPower = ";i[1]
+    rc=BleTxPowerSet(i[1])
+  case else
+  endselect
+endfunc rc
+
+//-------------------------------------------------------------------------
+//#CMD#// getdevname               - prints the device name as in the gap service
+//-------------------------------------------------------------------------
+function _GetDevName()
+  print "\nDevice Name = ";BleGetDeviceName$()
+endfunc 0
+
+//-------------------------------------------------------------------------
+//#CMD#// advert 'start' n          - start adverts, n=0,1,2,3
+//#CMD#// advert 'stop'             - stop adverts
+//#CMD#// advert 'init'             - call InitAdvReports(advFlags)
+//#CMD#// advert 'interval' n       - interval in milliseconds
+//#CMD#// advert 'timeout' n        - timeout in milliseconds
+//#CMD#// advert 'filter' n         - filter policy 0,1,2,3 see ADV_FILTERPOLICY_xxx
+//#CMD#// advert 'peer' addr14hexBytes$ - peer addr for direct advert
+//-------------------------------------------------------------------------
+function _Adverts()
+  tlen = ExtractStrToken(urtcmd$,tkn$)
+  if tlen == 0 then
+    exitfunc 5
+  endif
+  if strcmp(tkn$,"init")==0 then
+    exitfunc InitAdvReports(advFlags)
+  endif
+  if strcmp(tkn$,"stop")==0 then
+    exitfunc _StopAdv()
+  endif
+  if strcmp(tkn$,"start")==0 then
+    tlen = ExtractIntToken(urtcmd$,i[1])
+    if tlen > 0 then
+      exitfunc _StartAdv(i[1])
+    endif
+  endif
+  if strcmp(tkn$,"interval")==0 then
+    tlen = ExtractIntToken(urtcmd$,i[1])
+    if tlen > 0 then
+      exitfunc SetAdvertInt(i[1])
+    endif
+  endif
+  if strcmp(tkn$,"timeout")==0 then
+    tlen = ExtractIntToken(urtcmd$,i[1])
+    if tlen > 0 then
+      exitfunc SetAdvertTout(i[1])
+    endif
+  endif
+  if strcmp(tkn$,"filter")==0 then
+    tlen = ExtractIntToken(urtcmd$,i[1])
+    if tlen > 0 then
+      exitfunc SetAdvertFPol(i[1])
+    endif
+  endif
+  if strcmp(tkn$,"peer")==0 then
+    tlen = ExtractStrToken(urtcmd$,tkn$)
+    if tlen >= 12 then
+      exitfunc SetPeerAddr(tkn$)
+    endif
+  endif
+endfunc 5
+
+//-------------------------------------------------------------------------
+//#CMD#//  connect 'cancel'
+//#CMD#//  connect 'config' cfgID value
+//#CMD#//  connect addr14hexBytes$ conntimeoutms minConnIntMs maxConnIntMs sprvsnToutMs
+//-------------------------------------------------------------------------
+function _Connect()  
+  tlen = ExtractStrToken(urtcmd$,tkn$)
+  if tlen == 0 then
+    exitfunc 5
+  endif
+  if strcmp(tkn$,"cancel")==0 then
+    //cancel the connection attempt
+    exitfunc BleConnectCancel()
+  endif
+  if strcmp(tkn$,"config")==0 then
+    //extract cfgID and store in i[1] 
+    tlen = ExtractIntToken(urtcmd$,i[1])
+    if tlen == 0 then
+      exitfunc 5
+    endif
+    //extract value and store in i[2] 
+    tlen = ExtractIntToken(urtcmd$,i[2])
+    if tlen == 0 then
+      exitfunc 5
+    endif
+      
+    exitfunc BleConnectConfig(i[1],i[2])  
+  endif
+  
+  //the current token has to be a mac address
+  s$[1]=StrDehexize$(tkn$)
+  if strlen(s$[1]) != 7 then
+    exitfunc 5
+  endif
+  //extract conntimeoutms and store in i[1] 
+  tlen = ExtractIntToken(urtcmd$,i[1])
+  if tlen == 0 then
+    exitfunc 5
+  endif
+  //extract minConnIntMs and store in i[2] 
+  tlen = ExtractIntToken(urtcmd$,i[2])
+  if tlen == 0 then
+    exitfunc 5
+  endif
+  //extract maxConnIntMs and store in i[3] 
+  tlen = ExtractIntToken(urtcmd$,i[3])
+  if tlen == 0 then
+    exitfunc 5
+  endif
+  //extract sprvsnToutMs and store in i[4] 
+  tlen = ExtractIntToken(urtcmd$,i[4])
+  if tlen == 0 then
+    exitfunc 5
+  endif
+endfunc BleConnect(s$[1],i[1],i[2],i[3],i[4])
+
+//-------------------------------------------------------------------------
+//#CMD#//  disconnect                  //most recent connection is disconnected
+//#CMD#//  disconnect connHandle
+//-------------------------------------------------------------------------
+function _Disconnect()  
+  // extract the optional handle
+  tlen = ExtractIntToken(urtcmd$,i[1])
+  if tlen == 0 then
+    //handle was not supplied
+    i[1] = hConnLast
+  endif
+  // handle was supplied
+endfunc BleDisconnect(i[1])
+
+//==============================================================================
+//==============================================================================
+function OnUartCmd() as integer
+  rc=1 //assume there is an error
+  tlen = ExtractStrToken(urtcmd$,tkn$) //get first token
+  if tlen > 0 then
+    
+    if strcmp(tkn$,"startup")==0 then
+      rc = _StartUp()
+      
+    elseif strcmp(tkn$,"advert")==0 then
+      rc = _Adverts()
+      
+    elseif strcmp(tkn$,"connect")==0 then
+      rc = _Connect()
+      
+    elseif strcmp(tkn$,"disconnect")==0 then
+      rc = _Disconnect()
+      
+    elseif strcmp(tkn$,"txpower")==0 then
+      rc = _TxPower()
+      
+    elseif strcmp(tkn$,"getdevname")==0 then
+      rc = _GetDevName()
+    
+    //elseif strcmp(tkn$,"@@@@@")==0 then
+    //  rc = Proc_@@@@@()
+    endif
+  endif
+  // send a response back to the user
+  UartRsp(rc)
+endfunc 1
+
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
+
+//==============================================================================
+// This handler is called when data has arrived at the serial port
+//==============================================================================
+function HandlerUartRx() as integer
+  dim nMatch
+
+  //check if CR has been received
+  nMatch=UartReadMatch(stRsp$,13)
+  if nMatch!=0 then
+    //CR exists in the input buffer
+    urtcmd$ = strsplitleft$(stRsp$,nMatch)
+    exitfunc OnUartCmd()
+  endif
+endfunc 1
+
+//==============================================================================
+// This handler is called when there is a BLE message
+//==============================================================================
+function HandlerBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER) as integer
+
+  // Inform libraries
+  //ConnMngrOnBleMsg(nMsgId,nCtx)
+  AdvMngrOnBleMsg(nMsgId,nCtx)
+
+  select nMsgId
+  case BLE_EVBLEMSGID_CONNECT
+    DbgMsgVal(" --- Connect : ",nCtx)
+    hConnLast = nCtx
+    ShowConnParms(nCtx)
+    
+  case BLE_EVBLEMSGID_DISCONNECT
+    DbgMsgVal(" --- Disconnect : ",nCtx)
+
+  case BLE_EVBLEMSGID_DISPLAY_PASSKEY
+    DbgMsgVal("Display Pairing Passkey ",nCtx)
+
+  case BLE_EVBLEMSGID_NEW_BOND
+    DbgMsg(" +++ New Bond")
+
+  case BLE_EVBLEMSGID_UPDATED_BOND
+    DbgMsg(" +++ Updated Bond")
+
+  case BLE_EVBLEMSGID_ENCRYPTED
+    DbgMsg(" +++ Encrypted Connection")
+
+  case BLE_EVBLEMSGID_CONN_TO_BONDED_MASTER
+    DbgMsgVal(" -- Conn to Bonded Master ",nCtx)
+
+  case BLE_EVBLEMSGID_AUTH_KEY_REQUEST
+    DbgMsgVal(" +++ Auth Key Request, type=",nCtx)
+
+  case BLE_EVBLEMSGID_CONN_PARMS_UPDATE
+    ShowConnParms(nCtx)
+
+  case BLE_EVBLEMSGID_CONN_PARMS_UPDATE_FAIL
+    DbgMsg(" ??? Conn Parm Negotiation FAILED")
+
+  case else
+    DbgMsgVal("Unknown Ble Msg", nMsgId)
+  endselect
+endfunc 1
+
+//==============================================================================
+// This handler is called when there is an advert timeout
+//==============================================================================
+function HandlerBlrAdvTimOut() as integer
+
+  if AdvMngrOnAdvTimeOut() == 0 then
+
+    DbgMsg( "\nAdvert stopped via timeout" )
+    //DbgMsg( "\n   - could use SystemStateSet(0) to switch off" )
+
+    //------------------------------------------------------------
+    //  Switch off the system - requires a power cycle to recover
+    //------------------------------------------------------------
+    //  rc = SystemStateSet(0)
+    //  AssertResCode(rc,1199)
+  endif
+
+endfunc 1
+
+//==============================================================================
+// This handler is called when there is a connection attempt timeout
+//==============================================================================
+function HandlerBlrConnTimOut() as integer
+
+  DbgMsg( "\nConnection attempt stopped via timeout" )
+
+endfunc 1
+
+//******************************************************************************
+// Equivalent to main() in C
+//******************************************************************************
+
+//------------------------------------------------------------------------------
+// Enable synchronous event handlers
+//------------------------------------------------------------------------------
+OnEvent  EVUARTRX            call HandlerUartRx
+OnEvent  EVBLE_ADV_TIMEOUT   call HandlerBlrAdvTimOut
+OnEvent  EVBLEMSG            call HandlerBleMsg
+OnEvent  EVBLE_CONN_TIMEOUT  call HandlerBlrConnTimOut
+
+//------------------------------------------------------------------------------
+// Initialise Services and then wait for events
+//------------------------------------------------------------------------------
+if (AUTO_STARTUP & 0x01) != 0 then
+  //Create Advert packets and register services
+  OnStartup()
+endif
+if (AUTO_STARTUP & 0x02) != 0 then
+  //Create and commit default advert reports
+  rc=InitAdvReports(advFlags)
+  AssertResCode(rc,800)
+endif
+if (AUTO_STARTUP & 0x10) != 0 then
+  //Start advertising
+  rc=_StartAdv(ADV_IND)
+  AssertResCode(rc,810)
+endif  
+
+//Send user prompt for uart based command interface
+print "\n\r";DEVICENAME;"\n\r"
+
+//Send an OK response
+UartRsp(0)
+

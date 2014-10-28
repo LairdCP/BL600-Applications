@@ -1,0 +1,170 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2014
+'//
+'// dn.device.name.nv.memory.sb
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+'// +++++  which consists of all characters up to the first . and excluding it ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// This sample app advertises with a writeable device name. Once written, the new name is
+'// saved to non-volatile memory so it can be used upon a power cycle. The GAP service
+'// is updated, a new advert report is committed to the GATT table and the module starts
+'// advertising again.
+'//
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+#define BLE_EVBLEMSGID_DEVICENAME_WRITE                21  
+#define BLE_EVBLEMSGID_DISCONNECT                       1
+
+#define DEVNAME_REC_NUM                                100
+
+#define BLE_APPEARANCE_GENERIC_KEYRING                 576
+
+#define ENABLE_DEBUG_PRINTS                            1
+
+#define DEVNAME_WRITEABLE                              1
+#define BLE_DISCOVERABILITY_GENERAL                    2
+#define MAX_DEVNAME_CHARS                              20
+
+#define ADV_FILTERPOLICY_ANY                           0
+#define ADV_IND                                        0
+#define ADV_INTERVAL_MS                                100
+#define ADV_TIMEOUT_MS                                 0
+
+        '// Minimum acceptable connection interval (50 ms)
+#define MIN_CONN_INTERVAL                    50000
+        '// Maximum acceptable connection interval (100 ms).
+#define MAX_CONN_INTERVAL                    100000
+        '// Slave latency -- number of conn events that can be missed
+        '// Effective Conn interval will be (SLAVE_LATENCY+1)*ACTUAL_CONN_INTERVAL
+#define SLAVE_LATENCY                        0
+        '// Connection supervisory timeout (4 seconds) - max 32 seconds
+#define CONN_SUP_TIMEOUT                     4000000                   
+        '//EvBleMsg ID for a BLE disconnection event
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim rc      '//result code
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//------------------------------------------------------------------------------
+'// For debugging
+'// --- rc = result code
+'// --- ln = line number         
+'//------------------------------------------------------------------------------
+Sub AssertRC(rc,ln)   
+    if rc!=0 then
+        print "\nFail :";integer.h' rc;" at tag ";ln
+    endif
+EndSub
+
+
+'//------------------------------------------------------------------------------
+'// Register Error Handler as early as possible
+'//------------------------------------------------------------------------------
+sub HandlerOnErr()
+  if (ENABLE_DEBUG_PRINTS!=0) then
+    print "\n OnErr - ";GetLastError();"\n"
+  endif
+endsub
+
+onerror next HandlerOnErr
+
+'//------------------------------------------------------------------------------
+'// Update GAP service, initialise and commit an advert report then start advertising
+'//------------------------------------------------------------------------------
+sub StartAdvertising()
+    dim advRpt$     //advert report
+    dim scnRpt$     //scan report
+    dim addr$       //empty peer address
+    dim dn$         //device name
+    
+    dn$ = BleGetDeviceName$()       //device name to used in advertisements
+    
+    '//Update GAP service with device name set above. Make it writeable
+    rc=BleGapSvcInit(dn$, DEVNAME_WRITEABLE, BLE_APPEARANCE_GENERIC_KEYRING, MIN_CONN_INTERVAL, MAX_CONN_INTERVAL,CONN_SUP_TIMEOUT,SLAVE_LATENCY)
+    AssertRC(rc,103)
+    
+    '//Initialise advert report so that new device name will appear in adverts
+    rc=BleAdvRptInit(advRpt$, BLE_DISCOVERABILITY_GENERAL, 0, MAX_DEVNAME_CHARS)
+    AssertRC(rc,107)
+    
+    '//Commit advert report and empty scan report to GATT table
+    rc=BleAdvRptsCommit(advRpt$, scnRpt$)
+    AssertRC(rc,111)
+    
+    '//Start advertising
+    rc=BleAdvertStart(ADV_IND, addr$, ADV_INTERVAL_MS, ADV_TIMEOUT_MS, ADV_FILTERPOLICY_ANY)
+    AssertRC(rc,115)
+endsub
+
+'//------------------------------------------------------------------------------
+'// This subroutine gets called first
+'//------------------------------------------------------------------------------
+sub OnStartup()
+    dim devName$ 
+    
+    '//Load stored device name from non volatile memory. If not present, use current device name
+    rc=NvRecordGetEx(DEVNAME_REC_NUM, devName$ , BleGetDeviceName$())
+    
+    '//Update GAP service with device name read above
+    rc=BleGapSvcInit(devName$, DEVNAME_WRITEABLE, BLE_APPEARANCE_GENERIC_KEYRING, MIN_CONN_INTERVAL, MAX_CONN_INTERVAL,CONN_SUP_TIMEOUT,SLAVE_LATENCY)
+    AssertRC(rc,129)
+    
+    StartAdvertising()
+endsub
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+Function HndlrBleMsg(ByVal msgID, ByVal hConn) 
+     
+    if msgID == BLE_EVBLEMSGID_DEVICENAME_WRITE then
+        dim devName$ : devName$ = BleGetDeviceName$()       //device name to be saved
+        
+        '//write device name to non volatile memory
+        rc=NvRecordSet(DEVNAME_REC_NUM, devName$)
+              
+    elseif msgID == BLE_EVBLEMSGID_DISCONNECT then
+        '//Stop advertising so that new name can appear in subsequent adverts after updating the GAP service
+        rc=BleAdvertStop()
+        AssertRC(rc,148)
+        
+        '//Call this sub which will update GAP service, initialise and commit new advert report, and start advertising
+        StartAdvertising()
+    endif
+    
+EndFunc 1
+
+'//******************************************************************************
+'// Equivalent to main() in C
+'//******************************************************************************
+OnStartup()
+
+onevent evblemsg call HndlrBleMsg
+onerror          next HandlerOnErr
+
+'//------------------------------------------------------------------------------
+'// Wait for a synchronous event.
+'// An application can have multiple <WaitEvent> statements
+'//------------------------------------------------------------------------------
+waitevent
+

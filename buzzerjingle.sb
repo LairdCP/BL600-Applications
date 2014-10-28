@@ -1,0 +1,63 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// Author & Conductor:  Mark Duncombe
+//
+'//******************************************************************************
+
+
+dim rc
+dim n
+dim scale[7]
+dim text$[7]
+
+scale[0] = 262 '// Do
+scale[1] = 294 '// Re
+scale[2] = 330 '// Mi
+scale[3] = 349 '// Fa
+scale[4] = 392 '// So
+scale[5] = 440 '// La
+scale[6] = 494 '// Si
+
+text$[0] = "Do"
+text$[1] = "Re"
+text$[2] = "Mi"
+text$[3] = "Fa"
+text$[4] = "So"
+text$[5] = "La"
+text$[6] = "Si"
+
+rc=GpioSetFunc(15,2,3)  '// configure the SIO for the buzzer
+
+sub sound()
+ GpioWrite(15,scale[n])
+endsub
+
+sub quit()
+ timercancel(0)
+ GpioWrite(15,0)
+endsub
+
+
+TIMERSTART(0,500,1)
+n=0
+sound()
+Print text$[n];"\n"
+
+FUNCTION handlerTimer0()
+n=n+1
+if n>6 then
+ quit()
+ Print "\nExiting app"
+ EXITFUNC 0
+else
+ sound()
+ Print text$[n];"\n"
+endif
+ENDFUNC 1
+
+ONEVENT EVTMR0 CALL handlerTimer0
+
+WAITEVENT
+
+

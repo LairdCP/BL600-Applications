@@ -1,0 +1,142 @@
+//******************************************************************************
+// Laird Technologies (c) 2013
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// +++++                                                                      ++
+// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+// +++++  which consists of all characters up to the first . and excluding it ++
+// +++++                                                                      ++
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// Template Profile
+//
+//   ####################################
+//   #                                  #
+//   #  Search for TODO to make changes #
+//   #                                  #
+//   ####################################
+//
+//******************************************************************************
+
+//******************************************************************************
+// Definitions
+//******************************************************************************
+
+        //This defines how the application startsup and is a bit mask.
+        //Bit 0 == 1 then OnStartup() is called just before waitevent
+        //Bit 1 == 1 then InitAdvReports() is called just before waitevent
+        //Bit 4 == 1 then Start Advertising() is called just before waitevent
+        //Bit 5 == 1 then Start Scanning() is called just before waitevent
+#define AUTO_STARTUP                         0
+
+        //Set this to 0 to disable all debugging messages
+#define ENABLE_DEBUG_PRINTS                  1
+
+#define DEVICENAME                           "GAPMNGR"
+#define DEVICENAME_WRITABLE                  1
+#define APPEARANCE                           BLE_APPEARANCE_UNKNOWN
+#define MANF_NAME                            "Laird Technologies"
+#define MODELSTR                             "BL620"
+#define SERIALNUM                            "12345"
+#define HWREV                                "HwRev1.0"
+#define SWREV                                "SwRev1.0"
+
+//-------------------------------------------
+//TODO - Uncomment one of the following three lines
+//TODO #define SYSID                              "\01\02\03\04\05\06\07\08"
+#define SYSID                                ""
+//-------------------------------------------
+
+//-------------------------------------------
+//TODO - Uncomment one of the following two lines
+//#define REGLIST                              "\DE\AD\C0\DE"
+#define REGLIST                              ""
+//-------------------------------------------
+
+//-------------------------------------------
+//TODO - Uncomment one of the following two lines
+//#define PNPID                                "\01\04\BF\03\20\00\01"
+#define PNPID                                ""
+//-------------------------------------------
+
+//#define CHAR_CR                              13
+
+
+        // Minimum acceptable connection interval (0.5 seconds)
+#define MIN_CONN_INTERVAL                    80000
+        // Maximum acceptable connection interval (1 second).
+#define MAX_CONN_INTERVAL                    100000
+        // Slave latency -- number of conn events that can be missed
+        // Effective Conn interval will be (SLAVE_LATENCY+1)*ACTUAL_CONN_INTERVAL
+#define SLAVE_LATENCY                        0
+        // Connection supervisory timeout (4 seconds) - max 32 seconds
+#define CONN_SUP_TIMEOUT                     4000000
+        //DiscoverableMode, set to BLE_DISCOVERABILITY_xxx
+#define DISCOVERY_MODE                       BLE_DISCOVERABILITY_GENERAL
+#define MAX_DEVNAME_CHRS                     10
+        //Set Appearance advertise 0 to suppress
+#define ADV_APPEARANCE                       1
+        //Advertise interval
+#define ADV_INTERVAL_MS                      100
+        //Advertise timeout
+#define ADV_TIMEOUT_MS                       300000
+        //Whitelist Policy in Adverts
+#define ADV_WHITELIST_FILTER_POLICY          ADV_FILTERPOLICY_ANY
+
+        //Minimum long term key size in octets
+#define MIN_LTK_SIZE                         8
+        //Maximum long term key size in octets
+#define MAX_LTK_SIZE                         16
+
+        //This sets the pairing i/p capability using bonding
+#define PAIRING_IOCAPABILITY                 BLE_IOCAPABILITY_NONE
+
+//******************************************************************************
+// Debugging resource as early as possible
+//******************************************************************************
+
+//******************************************************************************
+// Library Import
+//******************************************************************************
+#include "lib\ble.sblib"
+#include "lib\debugging.routines.sblib"
+#include "lib\standard.advert.mngr.sblib"
+#include "lib\advert.report.manager.pl.sblib"
+#include "lib\security.manager.sblib"
+#include "lib\gap.service.sblib"
+#include "lib\device.information.service.sblib"
+
+#include "lib\cli.manager.sblib"
+
+//******************************************************************************
+// Debugging resource after libs
+//******************************************************************************
+
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
+
+//******************************************************************************
+// Initialisse Global Variable
+//******************************************************************************
+
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
+
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
+
+//******************************************************************************
+// Equivalent to main() in C
+//******************************************************************************
+
+
+//------------------------------------------------------------------------------
+// Wait for a synchronous event.
+// An application can have multiple <WaitEvent> statements
+//------------------------------------------------------------------------------
+WaitEvent
+
+

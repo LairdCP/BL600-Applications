@@ -1,0 +1,225 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// ######                                                                #######
+'// ######        Library File meant to be #included in files             #######
+'// ######                                                                #######
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// This library contains contains the link loss service manager and should be
+'// #included in your app
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim shLls as integer
+dim chLlsAltlvl as integer
+
+dim iniAlert        '//initial alert level
+dim lls$
+
+'//******************************************************************************
+'// Initialise Global Variable
+'//******************************************************************************
+
+iniAlert = INIT_ALERT_LEVEL
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//==============================================================================
+'//==============================================================================
+function CheckLvl()
+  if iniAlert < 0 then
+    exitfunc 0x6018
+  elseif iniAlert > 2 then
+    exitfunc 0x6018
+  endif
+endfunc 0
+
+'//==============================================================================
+'//==============================================================================
+function AddLlsCharAlertLevel() as integer
+  dim rc
+
+  //----------------------------------------------------------------------------
+  // Create the Immediate Level Characteristic which has a UUID of 0x2A06
+  //----------------------------------------------------------------------------
+  dim mdAttr
+  dim mdCccd
+  dim mdSccd
+  dim chProp
+  //dim attr$
+
+  //++++
+  //Create the metadata for the value attribure in the characteristic
+  //++++
+  mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_ENC_NO_MITM,BLE_ATTR_ACCESS_ENC_NO_MITM,1,0,rc)
+  AssertResCode(rc,9200)
+  //There is no CCCD in this characteristic
+  mdCccd = BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  //There is no SCCD in this characteristic
+  mdSccd = BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  //Create the Characteristic object
+  chProp = BLE_CHAR_PROPERTIES_READ | BLE_CHAR_PROPERTIES_WRITE
+  rc = BleCharNew(chProp,BleHandleUuid16(0x2A06),mdAttr,mdCccd,mdSccd)
+  AssertResCode(rc,9212)
+
+  //++++
+  //Add the USER_DESCRIPTION Descriptor
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9220)
+  //attr$="user_desc"
+  //rc = BleCharDescUserDesc(attr$,mdAttr)
+  //AssertResCode(rc,9230)
+
+  //++++
+  //Add the PRESENTATION FORMAT Descriptor
+  //++++
+  //rc = BleCharDescPrstnFrmt(format,exponent,unit,namespace,namespacedesc)
+  //AssertResCode(rc,9240)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- first one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9250)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9260)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- second one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9251)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9261)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- nth one
+  //++++
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- last one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,925x)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,926x)
+
+  //++++
+  //Commit the characteristic
+  //++++
+  lls$="\00"
+  rc = BleEncode8(lls$,iniAlert,0)
+  rc = BleCharCommit(shLls,lls$,chLlsAltlvl)
+  AssertResCode(rc,9300)
+endfunc rc
+
+
+'//==============================================================================
+'//==============================================================================
+function RegLlsService() as integer
+  dim rc
+
+  //----------------------------------------------------------------------------
+  //Create a battery PRIMARY service attribure which has a uuid of 0x1803
+  //----------------------------------------------------------------------------
+  rc = BleSvcCommit(BLE_SERVICE_PRIMARY,BleHandleUuid16(0x1803),shLls)
+  AssertResCode(rc,9100)
+
+  //----------------------------------------------------------------------------
+  // Create the Battery Level Characteristic which has a UUID of 0x2A06
+  //----------------------------------------------------------------------------
+  rc = AddLlsCharAlertLevel()
+  AssertResCode(rc,9110)
+
+endfunc rc
+
+'//==============================================================================
+'//==============================================================================
+function LlsGetAlrtVal() as integer
+  dim lvl
+  dim rc
+  dim len
+
+  rc = BleCharValueRead(chLlsAltlvl,lls$)
+  AssertResCode(rc,9510)
+  if rc == 0 then
+    len = BleDecodeU8(lls$,lvl,0)
+  else
+    lvl = 0
+  endif
+
+endfunc lvl
+
+
+'//==============================================================================
+'//==============================================================================
+sub InitLinkLossService()
+  dim rc
+
+  rc=CheckLvl()
+  if rc == 0 then
+    rc = RegLlsService()
+    AssertResCode(rc,2640)
+    if rc==0 then
+       AddUuid(UUID_LINK_LOSS_SERVICE)
+    endif
+  endif
+
+endsub
+
+
+'//==============================================================================
+'//will return <0 if reason for disconnection is not connection timeout.
+'//otherwise it returns the alert level
+'//==============================================================================
+function LlsOnDiscon(nRsn) as integer
+  dim lvl
+  dim attr$
+  dim rc
+
+  lvl = -1
+
+  if nRsn == BLE_HCI_CONNECTION_TIMEOUT then
+    //read the link loss value from the local attribute
+    rc=BleCharValueRead(chLlsAltlvl,attr$)
+    AssertResCode(rc,2890)
+    if rc==0 then
+      rc = BleDecodeU8(attr$,lvl,0)
+    else
+      lvl=2
+    endif
+  endif
+endfunc lvl
+
+
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Other initialisations
+'//******************************************************************************
+
+
+

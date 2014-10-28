@@ -1,0 +1,152 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+'// +++++  which consists of all characters up to the first . and excluding it ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// Virtual Serial Port "Soft" Loopback app
+'// Instructions:
+'// - Run the app by entering the app name "uloop<cr>"
+'// - If AUTO_STARTUP bit 0 is set to 1, the initapp command will be run automatically.
+'// - If AUTO_STARTUP bit 0 is set to 0, enter the "initapp<cr>" command
+'// - When ready to connect to the devkit, enter the "ad 1" command to start advertising. 
+'// - Connect to the devkit and start sending data. Any data received are looped back by
+'//   this app i.e. all data received are sent back to the central unit.
+'//
+'// Further commands are available - see comments in the cli.uloop.vsp.sblib file.
+'//
+'//   ####################################
+'//   #                                  #
+'//   #  Search for TODO to make changes #
+'//   #                                  #
+'//   ####################################
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+        //This defines how the application startsup and is a bit mask.
+        //Bit 0 == 1 then OnStartup() is called just before waitevent
+        //Bit 1 == 1 then StartAds() is called just before waitevent
+#define AUTO_STARTUP                         1
+
+        '//Set this to 0 to disable all debugging messages
+#define ENABLE_DEBUG_PRINTS                  1
+
+#define DEVICENAME                           "LT_ULOOP"
+#define DEVICENAME_WRITABLE                  1
+#define APPEARANCE                           BLE_APPEARANCE_GENERIC_TAG
+#define MANF_NAME                            "Laird Technologies"
+#define MODELSTR                             "BL600"
+#define SERIALNUM                            "12345"
+#define HWREV                                "HwRev1.0"
+#define SWREV                                "SwRev1.0"
+
+//-------------------------------------------
+//TODO - Uncomment one of the following three lines
+//TODO #define SYSID                                "\01\02\03\04\05\06\07\08"
+//#define SYSID                                "@"
+#define SYSID                                ""
+//-------------------------------------------
+
+//-------------------------------------------
+//TODO - Uncomment one of the following two lines
+//#define REGLIST                              "\DE\AD\C0\DE"
+#define REGLIST                              ""
+//-------------------------------------------
+
+//-------------------------------------------
+//TODO - Uncomment one of the following two lines
+//#define PNPID                                "\01\04\BF\03\20\00\01"
+#define PNPID                                ""
+//-------------------------------------------
+
+#define CHAR_CR                              13
+
+
+        '// Minimum acceptable connection interval (7.5ms)
+#define MIN_CONN_INTERVAL                    7500
+        '// Maximum acceptable connection interval (1 second).
+#define MAX_CONN_INTERVAL                    1000000
+        '// Slave latency -- number of conn events that can be missed
+        '// Effective Conn interval will be (SLAVE_LATENCY+1)*ACTUAL_CONN_INTERVAL
+#define SLAVE_LATENCY                        0
+        '// Connection supervisory timeout (4 seconds) - max 32 seconds
+#define CONN_SUP_TIMEOUT                     10000000
+        '//DiscoverableMode, set to BLE_DISCOVERABILITY_xxx
+#define DISCOVERY_MODE                       BLE_DISCOVERABILITY_GENERAL
+#define MAX_DEVNAME_CHRS                     10
+        '//Set Appearance advertise 0 to suppress
+#define ADV_APPEARANCE                       0
+        '//Advertise interval
+#define ADV_INTERVAL_MS                      100
+        '//Advertise timeout
+#define ADV_TIMEOUT_MS                       300000
+
+        '//Whitelist Policy in Adverts
+#define ADV_WHITELIST_FILTER_POLICY          ADV_FILTERPOLICY_BOTH
+
+        '//Minimum long term key size in octets
+#define MIN_LTK_SIZE                         8
+        '//Maximum long term key size in octets
+#define MAX_LTK_SIZE                         16
+
+        '// Set this to non-zero to enable notiy on batt service
+#define BATT_NOTIFY                          0
+#define BATT_INIT_LEVEL_PERC                 100
+
+        '//This sets the pairing i/p capability using bonding
+#define PAIRING_IOCAPABILITY                 BLE_IOCAPABILITY_NONE
+
+        '//Connection Update Negotiation paramters
+#define FIRST_CONN_PARAMS_UPDATE_DELAY       5000
+#define NEXT_CONN_PARAMS_UPDATE_DELAY        5000
+#define MAX_CONN_PARAMS_UPDATE_DELAY         15000
+
+'//******************************************************************************
+'// Debugging resource as early as possible
+'//******************************************************************************
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+#include "lib\cli.uloop.vsp.sblib"
+
+'//******************************************************************************
+'// Debugging resource after libs
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+'//******************************************************************************
+'// Initialisse Global Variable
+'//******************************************************************************
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Equivalent to main() in C
+'//******************************************************************************
+
+
+'//------------------------------------------------------------------------------
+'// Wait for a synchronous event.
+'// An application can have multiple <WaitEvent> statements
+'//------------------------------------------------------------------------------
+WaitEvent
+
+

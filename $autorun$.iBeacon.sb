@@ -1,0 +1,94 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  When UwTerminal downloads the app it will store it as a filename   ++
+'// +++++  which consists of all characters up to the first . and excluding it ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// $autorun$.iBeacon.sb
+'//
+'//
+        '//version of this app in Device Info Service
+#define APP_VERSION             "2.1.0"
+'//
+'//**************************************************************************************
+'//**** Uncomment the first #define line for firmware older than 1.3.57.19 and older ****
+'//**************************************************************************************
+'//#define HANDLERCHARVAL HndlrCharVal(ByVal charHndl)  //for <= v1.3.57.19  
+#define HANDLERCHARVAL HndlrCharVal(ByVal charHndl, ByVal offset, ByVal len)
+'//
+'//   ###################################################################################
+'//   #     Version history in reverse chronological order (Customer change history)    #
+'//   ###################################################################################
+'//   #                                                                                 #
+'//   #  -----------------------------------------------------------------------------  #
+'//   #  ::Changelog:: 05/12/13 -> 2.1.0                                                #
+'//   #  -----------------------------------------------------------------------------  # 
+'//   #                                                                                 #
+'//   ###################################################################################
+'//
+'//
+'//   ###################################################################################
+'//   #                                                                                 #
+'//   # See file $autorun$.iBeacon.sblib for usage instructions                         #
+'//   #                                                                                 #
+'//   ###################################################################################
+'//    
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions that customers use to customise the source
+'//******************************************************************************
+        '// Default Uuid for beacon
+#define BEACON_UUID                          "\e2\c5\6d\b5\df\fb\48\d2\b0\60\d0\f5\a7\10\96\e0"
+        '// Default Major value for beacon (16 bit number)
+#define BEACON_MAJOR                         0x1234
+        '// Default Minor value for beacon (16 bit number)
+#define BEACON_MINOR                         0x5678
+        '// Default TxPower, one of (4,0,-4,-8,-12,-16,-20,-40,-50) 
+#define BEACON_TXPOWER_DBM                   4
+        '//RSSI at 1m from BL600 when tx power = 4 
+        '//Set this by advertising at 4 dBm and measuring the RSSI 1m from the BL600
+#define CALIBRTD_VALUE_DBM                   -60
+        '// Default value for iBeacon format
+        '//   --> 0       : Full AD
+        '//   --> 1       : UUID + Major + Minor
+        '//   --> 2       : UUID
+        '//   --> Default : 0
+#define BEACON_FORMAT                        0
+
+        '// Default time to remain connectible : 1-255
+#define REMAIN_CONN_TME_SEC                  20
+        '// min time to remain connectible when updated over the air : 3-255 
+#define REMAIN_CONN_TME_SEC_MIN              3
+
+        '//Default advertising interval -- higher the number, lower the current consumption
+#define ADV_INTERVAL_MS                      200  //should be in range 100..5000
+        '//Advertise time out (0==forever)
+#define ADV_TIMEOUT_MINUTES                  0
+
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// The following information is for the GAP service  (UUID = 0x1800)
+// Feel free to modify to suite your need
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+       '//See BT Spec for other assigned values
+#define APPEARANCE                           512 //Generic Tag
+
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// The following information is for the DEVICE INFO service (UUID = 0x180A)
+// Feel free to modify to suite your need
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#define MANF_NAME                            "Laird Technologies"
+#define MODELSTR                             "BL600"
+#define SERIALNUM                            "12345"
+#define HWREV                                "1.0"
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+#include "$autorun$.iBeacon.sblib"
+

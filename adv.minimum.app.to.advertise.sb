@@ -1,0 +1,5 @@
+dim rc,addr$
+rc = BleAdvertStart(3,addr$,100,30000,0)
+WaitEvent
+
+

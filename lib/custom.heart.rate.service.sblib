@@ -1,0 +1,415 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// ######                                                                #######
+'// ######        Library File meant to be #included in files             #######
+'// ######                                                                #######
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// This library contains contains Heart Rate Service and should be
+'// #included in your app.
+'//
+'//   Usage: (also see sample hrs.heart.rate.sb for more details)
+'//
+'//     (*) Call LibInit(...) from your code
+'//           If you want the battery service to be installed, then provide
+'//           a valid value in the range 0 to 100 for the btlvl parameter
+'//     (*) You can start/stop adverts using StartAdverts(..) and StopAdverts()
+'//     (*) To cater for passkey challenges during pairing, you need to handle
+'//           the BLE_EVBLEMSGID_AUTH_KEY_REQUEST and BLE_EVBLEMSGID_DISPLAY_PASSKEY
+'//           messages in the EVBLEMSG handler
+'//     (*) When you get BLE_EVBLEMSGID_DISPLAY_PASSKEY, you need to display the
+'//           passcode so that it can be entered in the peer device.
+'//     (*) To submit a passkey call the function SendPassKey() with an integer value
+'//     (*) When adverts timeout, you need to perform appropriate actions in the
+'//            handler HandlerBlrAdvTimOut in your app.
+'//     (*) To send heart rate call SendHrData()
+'//     (*) To add heart rate interval call AddRrData()
+'//
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+#define RR_RING_BUFFER_SIZE                9
+#define MAX_HRM_LEN                        20
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim shHrs as integer        '//Service handle
+dim chHrsMeas as integer    '//Heart Rate Measurement Characteristic Handle
+dim chHrsLoc as integer     '//Heart Rate Sensor Location Handle
+
+dim hrtRate                 '//Heart rate in beats per minute
+dim sensLoc                 '//heart sensor location
+dim sensCntct               '//heart sensor sensor contact status on/off
+dim hrs$ as string          '//hrs measurement attribute
+dim hRing                   '//handle for the rr ring buffer
+
+'//******************************************************************************
+'// Initialisse Global Variable
+'//******************************************************************************
+
+hrtRate         = 0
+sensLoc         = BLE_HRS_BODY_SENSOR_LOCATION_CHEST
+sensCntct       = 1
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Register Error Handler as early as possible
+'//******************************************************************************
+
+'//==============================================================================
+'// data to encode is in hrtRate,sensCntct,hRing
+'//==============================================================================
+sub HrsEncode()
+  dim rc
+  dim itms
+  dim encsz
+  dim flgs
+  dim ndx
+  dim rr
+
+  //Initialise the flags byte
+  flgs = 0
+  //Get number of items in the RR buffer
+  rc = CircBufItems(hRing,itms)
+
+  if hrtRate < 256 then
+    //only one byte to encode
+    encsz = (itms*2) + 2
+  else
+    //two bytes to encode
+    encsz = (itms*2) + 3
+    //heart rate is in 2 bytes
+    flgs  = flgs | 0x01
+  endif
+
+  //update the sensor contact info
+  if sensCntct then
+    flgs  = flgs | 0x06
+  else
+    flgs  = flgs | 0x04
+  endif
+
+  //update the rrInfo bit
+  if itms then
+    flgs  = flgs | 0x10
+  endif
+
+  //create the attribute buffer space
+  rc= StrFill(hrs$,0,encsz)
+  //Save the flags field
+  rc = BleEncode8(hrs$,flgs,0)
+  //save the heart rate info
+  if hrtRate < 256 then
+    rc = BleEncode8(hrs$,hrtRate,1)
+    ndx = 2
+  else
+    rc = BleEncode16(hrs$,hrtRate,1)
+    ndx = 3
+  endif
+  //save the rrInfo if there is any
+  while (itms)
+    rc = CircBufRead(hRing,rr)
+    rc = BleEncode16(hrs$,rr,ndx)
+    ndx = ndx + 2
+    itms = itms - 1
+  endwhile
+
+
+endsub
+
+'//==============================================================================
+'//==============================================================================
+function AddCharHrsMeas() as integer
+  dim rc
+
+  //----------------------------------------------------------------------------
+  // Create the Heart Rate Measurement Characteristic which has a UUID of 0x2A37
+  //----------------------------------------------------------------------------
+  dim mdAttr
+  dim mdCccd
+  dim mdSccd
+  dim chProp
+  //dim attr$
+
+  //++++
+  //Create the metadata for the value attribute in the characteristic
+  // Heart Rate attribute has variable length
+  //++++
+  mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_NONE,BLE_ATTR_ACCESS_NONE,MAX_HRM_LEN,1,rc)
+  AssertResCode(rc,9200)
+  //There is a CCCD in this characteristic
+  mdCccd=BleAttrMetadata(BLE_ATTR_ACCESS_OPEN,BLE_ATTR_ACCESS_OPEN,2,0,rc)
+  AssertResCode(rc,9202)
+  //There is no SCCD in this characteristic
+  mdSccd = BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  //AssertResCode(rc,9204)
+  //Create the Characteristic object
+  chProp = BLE_CHAR_PROPERTIES_NOTIFY
+  rc = BleCharNew(chProp,BleHandleUuid16(0x2A37),mdAttr,mdCccd,mdSccd)
+  AssertResCode(rc,9206)
+
+  //++++
+  //Add the USER_DESCRIPTION Descriptor
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9220)
+  //attr$="user_desc"
+  //rc = BleCharDescUserDesc(attr$,mdAttr)
+  //AssertResCode(rc,9230)
+
+  //++++
+  //Add the PRESENTATION FORMAT Descriptor
+  //++++
+  //rc = BleCharDescPrstnFrmt(format,exponent,unit,namespace,namespacedesc)
+  //AssertResCode(rc,9240)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- first one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9250)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9260)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- second one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9251)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9261)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- nth one
+  //++++
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- last one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,925x)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,926x)
+
+  //++++
+  //Commit the characteristic
+  //++++
+  HrsEncode()
+  rc = BleCharCommit(shHrs,hrs$,chHrsMeas)
+  AssertResCode(rc,9300)
+
+endfunc rc
+
+
+'//==============================================================================
+'//==============================================================================
+function AddCharHrsSensLoc() as integer
+  dim rc
+
+  //----------------------------------------------------------------------------
+  // Create the Heart Rate Sensor Location Characteristic which has a UUID of 0x2A38
+  //----------------------------------------------------------------------------
+  dim mdAttr
+  dim mdCccd
+  dim mdSccd
+  dim chProp
+  dim attr$
+
+  //++++
+  //Create the metadata for the value attribute in the characteristic
+  // Heart Rate attribute has variable length
+  //++++
+  mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_OPEN,BLE_ATTR_ACCESS_NONE,1,0,rc)
+  AssertResCode(rc,9250)
+  //There is a CCCD in this characteristic
+  mdCccd=BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  //AssertResCode(rc,9252)
+  //There is no SCCD in this characteristic
+  mdSccd = BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  //AssertResCode(rc,9254)
+  //Create the Characteristic object
+  chProp = BLE_CHAR_PROPERTIES_READ
+  rc = BleCharNew(chProp,BleHandleUuid16(0x2A38),mdAttr,mdCccd,mdSccd)
+  AssertResCode(rc,9256)
+
+  //++++
+  //Add the USER_DESCRIPTION Descriptor
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9220)
+  //attr$="user_desc"
+  //rc = BleCharDescUserDesc(attr$,mdAttr)
+  //AssertResCode(rc,9230)
+
+  //++++
+  //Add the PRESENTATION FORMAT Descriptor
+  //++++
+  //rc = BleCharDescPrstnFrmt(format,exponent,unit,namespace,namespacedesc)
+  //AssertResCode(rc,9240)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- first one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9250)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9260)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- second one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9251)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9261)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- nth one
+  //++++
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- last one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,925x)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,926x)
+
+  //++++
+  //Commit the characteristic
+  //++++
+  attr$ ="\00"
+  rc = BleEncode8(attr$,sensLoc,0)
+  rc = BleCharCommit(shHrs,attr$,chHrsLoc)
+  AssertResCode(rc,9350)
+
+endfunc rc
+
+
+'//==============================================================================
+'//==============================================================================
+function RegHrsService() as integer
+  dim rc
+
+  //----------------------------------------------------------------------------
+  //Create a Heart Rate PRIMARY service attribure which has a uuid of 0x180D
+  //----------------------------------------------------------------------------
+  rc = BleSvcCommit(BLE_SERVICE_PRIMARY,BleHandleUuid16(0x180D),shHrs)
+  AssertResCode(rc,9100)
+
+  //----------------------------------------------------------------------------
+  // Create the Heart Rate Measurement Characteristic which has a UUID of 0x2A37
+  //----------------------------------------------------------------------------
+  rc = AddCharHrsMeas()
+  AssertResCode(rc,9110)
+
+  //----------------------------------------------------------------------------
+  // Create the XXXX Characteristic which has a UUID of YYYYYY
+  //----------------------------------------------------------------------------
+  rc = AddCharHrsSensLoc()
+  AssertResCode(rc,9120)
+
+endfunc rc
+
+
+'//==============================================================================
+'// snsloc is an integer as follows:-
+'//   0   Other
+'//   1   chest
+'//   2   wrist
+'//   3   finger
+'//   4   hand
+'//   5   ear Lobe
+'//   6   foot
+'//==============================================================================
+sub InitHrsService()
+  dim rc
+
+  //Create ring buffer for the RR data store
+  rc = CircBufCreate(RR_RING_BUFFER_SIZE, hRing)
+  AssertResCode(rc,2070)
+
+  rc = RegHrsService()
+  AssertResCode(rc,2072)
+  if rc==0 then
+     AddUuid(UUID_HEART_RATE_SERVICE)
+  endif
+
+endsub
+
+'//==============================================================================
+'// will return 0 if successfully sent
+'//==============================================================================
+function SendHrData() as integer
+  dim rc
+  //rc = BleSvcSetHeartRate(hrtRate,sensCntct)
+  HrsEncode()
+//print "\nhrs_attr=";strhexize$(hrs$);"\n"
+  rc = BleCharValueNotify(chHrsMeas,hrs$)
+  AssertResCode(rc,2090)
+endfunc rc
+
+
+'//==============================================================================
+'//==============================================================================
+function AddRrData(rrInt as integer) as integer
+  dim rc
+  if (rrInt>=0)&&(rrInt<=65535) then
+    rc=CircBufOverWrite(hRing,rrInt)
+    if rc==0x5103 then
+      //the buffer was full, so change value that regression test is expecting
+      // **** customer is not expected to do this
+      rc=0x6029
+    endif
+  else
+    rc = 0x6025
+  endif
+  AssertResCode(rc,2100)
+endfunc rc
+
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+'//==============================================================================
+'// MUST be called from the BLE message handler
+'//==============================================================================
+sub HrsOnBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER)
+  //dim rc
+  //select nMsgId
+  //case else
+    //Do nothing
+  //endselect
+endsub
+
+
+
+
+'//******************************************************************************
+'// Other initialisations
+'//******************************************************************************
+
+
+

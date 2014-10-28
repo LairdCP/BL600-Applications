@@ -1,0 +1,94 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// ######                                                                #######
+'// ######        Library File meant to be #included in files             #######
+'// ######                                                                #######
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// This library contains contains the connection manager and should be
+'// #included in your app
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim minint          '// minimum interval range is 7500us to 4000000us
+dim maxint          '// minimum interval range is 7500us to 4000000us
+dim sprtout         '// link supervision timeout max value 32000000us
+dim slatncy         '// slave latency 0..N where N*Interval must be less than link
+                    '// supervision timeout
+dim hConn           '// connection handle
+
+'//******************************************************************************
+'// Initialise Global Variable
+'//******************************************************************************
+
+hConn   = BLE_CONN_HANDLE_INVALID
+minint  = MIN_CONN_INTERVAL
+maxint  = MAX_CONN_INTERVAL
+sprtout = CONN_SUP_TIMEOUT
+slatncy = SLAVE_LATENCY
+
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//==============================================================================
+'// hc is the handle of the connection to be dropped
+'//==============================================================================
+function Disconnect(hc as integer) as integer
+  dim rc
+  rc = BleDisconnect(hc)
+  AssertResCode(rc,4100)
+endfunc rc
+
+'//==============================================================================
+'// hc is the handle of the connection to be dropped
+'//==============================================================================
+function ConnNewParms(hc as integer) as integer
+  dim rc
+  rc = BleSetCurConnParms(hc,minint,maxint,sprtout,slatncy)
+  AssertResCode(rc,4110)
+endfunc rc
+
+
+'//==============================================================================
+'// MUST be called from the BLE message handler
+'//==============================================================================
+sub ConnMngrOnBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER)
+  select nMsgId
+  case BLE_EVBLEMSGID_CONNECT
+    hConn = nCtx
+
+  case BLE_EVBLEMSGID_DISCONNECT
+    hConn = BLE_CONN_HANDLE_INVALID
+
+  case else
+    //Do nothing
+  endselect
+endsub
+
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Other initialisations
+'//******************************************************************************
+
+
+

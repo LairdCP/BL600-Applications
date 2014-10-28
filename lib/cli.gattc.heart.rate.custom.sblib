@@ -1,0 +1,887 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+'// +++++  which consists of all characters up to the first . and excluding it ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// Heart Rate Profile
+'//
+'//   When you run the app you will get a > command prompt to allow you to submit
+'//   commands as follows:-
+'//
+'//     sf nnnn           - invoke BleDiscServiceFirst( startHandle==nnnn)
+'//     snext             - invoke BleDiscServiceNext()
+'//     cf nnnn           - invoke BleDiscCharFirst( startHandle==nnnn)
+'//     cnext             - invoke BleDiscCharNext()
+'//     df nnnn           - invoke BleDiscDescFirst( startHandle==nnnn)
+'//     dnext             - invoke BleDiscDescNext()
+'//
+'//     go nnnn           -- open gatt client with nnnn hvx data buffer and flags
+'//                          flags = nnnn % 1000
+'//                          hvx data buffer len = nnnn / 1000
+'//     gclose            -- close gatt client
+'//
+'//     of nnnn           -- vOffset == nnnn
+'//     aa hh..hh         - ad$ = strdehexize$(hh..hh)
+'//     w0 nnnn           - gattc write ( handle =nnnn, offset=vOffset, stData=ad$)
+'//     w1 nnnn           - gattc write command ( handle =nnnn, offset=vOffset, stData=ad$)
+'//     ar nnnn           - gattc read ( handle =nnnn, offset=vOffset)
+'//     attrea            - Call BleGattcReadData()
+'//     ntfyrd            - Call BleGattcNotifyRead()
+'//
+'//     pu0                - svcUuid = hndlUuid (uu or uv command)/hndlUuid reset to 0
+'//     p0 hhhh            - svcInst = hhhh
+'//     pu1                - chrUuid = hndlUuid (uu or uv command)/hndlUuid reset to 0
+'//     p1 hhhh            - chrInst = hhhh
+'//     pu2                - dscUuid = hndlUuid (uu or uv command)/hndlUuid reset to 0
+'//     p2 hhhh            - dscInst = hhhh                
+'//     fnchar             - invoke BleGattcFindChar(. svcUuid svcInst chrUuid chrInst )
+'//     fndesc             - invoke BleGattcFindDesc(. svcUuid svcInst chrUuid chrInst dscUuid dscInst)
+'//
+'//     eh nnnn           - vEndHndl  = nnnn
+'//
+'//     uu hhhh           - hhhh is 4digit hex number
+'//                           invoke hndlUuid = BleHandleUuid16(hhhh)
+'//     uv hh..hh         - hh..hh is 32 digit hex number
+'//                           invoke hndlUuid = BleHandleUuid128(hh..hh)
+'//     uuclr             - set hndlUuid=0
+'//
+'//     rg hh..hh         - hh..hh is 32 digit hex number
+'//                           invoke xUuid = BleHandleUuid128(hh..hh)
+'//
+'//     z1 nnnn           - set connection handle to artbitrary value nnnn
+'/
+'//     hr nnnn           - set heart rate (decimal)
+'//     rr nnnn           - add rr interval data (16 bit decimal)
+'//     ky nnnn           - set pairing passcode (decimal)
+'//     ai nnnn           - set advertising interval in milliseconds
+'//     at nnnn           - set advertising timeout in milliseconds
+'//     tp nnnn           - set tx power to that specified
+'//     sc n              - set sensor contact, n=0 for not, 1 for contact
+'//     ad n              - if n=0 then stop adverts otherwise start adverts if
+'//                            n=1 then ADV_IND
+'//                            n=2 then ADV_DIRECT_IND
+'//                            n=3 then ADV_SCAN_IND
+'//                            n=4 then ADV_NONCONN_IND
+'//     bl nn             - set battery level to nn %
+'//     ma nnnnn..nnn     - set mac address - 14 hex digits
+'//                            First two must be 00 for IEEE mac adress
+'//                                              01 for private random address
+'//     devname           - get devicename and print it
+'//     discon            - disconnect
+'//     send              - send data to peer
+'//     quit              - quit app to command mode via reset
+'//     txpower           - display current tx power
+'//     stop              - exit app to command mode and can resume using RESUME command
+'//     dc n              - if n=0 then DCDC if OFF
+'//                            n=2 then DCDC is AUTO
+'//                            n=anything_else then DCDC is ON
+'//     in nnnn           - set min conn interval (us)
+'//     ix nnnn           - set max conn interval (us)
+'//     st nnnn           - set supervision timeout (us)
+'//     sl nnnn           - set slave latency
+'//     negp              - negotiate connection parameters
+'//     dr aaaaaa         - set device name with read only
+'//     dw aaaaaa         - set device name with read/write capability only
+'//     db nn             - display debug info associated with nn
+'//     fg n              - n is 0 to 3 (see BLE_DISCOVERABILITY_xxx )
+'//
+'//
+'// 13 Mar 2013
+'//    Created
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+#include "lib\debugging.routines.sblib"
+#include "lib\ble.sblib"
+#include "lib\standard.advert.mngr.sblib"
+#include "lib\advert.report.manager.sblib"
+#include "lib\connection.manager.sblib"
+#include "lib\security.manager.sblib"
+#include "lib\gap.service.sblib"
+#include "lib\device.information.service.sblib"
+#include "lib\custom.battery.service.sblib"
+#include "lib\custom.heart.rate.service.sblib"
+
+
+'//******************************************************************************
+'// Debugging resource after libs
+'//******************************************************************************
+
+'//==============================================================================
+'//==============================================================================
+sub DbgInfo(id as integer)
+  select id
+  case 0
+    DbgPrnAdvReport(adRpt$)
+  case 1
+    DbgPrnAdvReport(scRpt$)
+
+  case else
+  endselect
+endsub
+
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim stRsp$ as string        '//Uart rx data is stored here
+dim ok$,er$,pr$
+dim msg$
+dim mnltk                   '//min size of ltk
+dim mxltk                   '//max size of ltk
+dim advFlags                '//value for flags AD
+dim dn$                     '//device name
+
+dim hndlUuid                '//for gattc query use of uuid
+dim cHndl                   '//connection handle
+dim xUuid                   '//used to register a 128 bit uuid
+dim vHndlSt                 '//Start handle
+dim vHndlEn                 '//End handle
+dim vOffset                 '//offset
+dim ad$
+dim svcUuid,chrUuid,dscUuid
+dim svcInst,chrInst,dscInst
+
+'//******************************************************************************
+'// Initialisse Global Variable
+'//******************************************************************************
+
+ok$    ="\nOK"
+er$    ="\nERROR "
+pr$    ="\r\n>"
+
+mnltk    = MIN_LTK_SIZE
+mxltk    = MAX_LTK_SIZE
+advFlags = DISCOVERY_MODE    '//can be changed via 'fg' command
+
+sensLoc  = BLE_HRS_BODY_SENSOR_LOCATION_CHEST   // see lib/ble.sblib for more defines
+
+cHndl   = 0
+hndlUuid = 0   //look for all
+vHndlEn = 0
+vOffset = 0
+ad$="\01\02\03\04"
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//==============================================================================
+'// This is called to start things off just before the waitevent at the end of
+'// the file
+'//==============================================================================
+sub OnStartup()
+
+  InitSecurityMngr(PAIRING_IOCAPABILITY,MIN_LTK_SIZE, MAX_LTK_SIZE)
+
+  // Initialise services
+  InitGapService()
+  InitDisService()
+
+  InitHrsService()
+  InitBatService(BATT_INIT_LEVEL_PERC,BATT_NOTIFY)  //2nd parameter will be allowed to be 1 in future
+
+  // Initiliase advert and scan reports
+  InitAdvReports(advFlags)
+
+endsub
+
+
+'//==============================================================================
+'//==============================================================================
+sub UartRsp(rsp as integer)
+  dim rc
+  if rsp == 0 then
+    print ok$;pr$
+  else
+    print er$;integer.h' rsp;pr$
+  endif
+endsub
+
+'//==============================================================================
+'//==============================================================================
+sub UartMsg(byref msg$ as string)
+  dim rc
+  rc = UartWrite(msg$)
+endsub
+
+'//==============================================================================
+'//==============================================================================
+function StartAds(adv as integer) as integer
+  dim rc
+  rc=StartAdverts(adv)
+  if rc==0 then
+    DbgMsgVal("Start Adverts",adv)
+  endif
+endfunc rc
+
+'//==============================================================================
+'//==============================================================================
+function StopAds() as integer
+  dim rc
+  rc=StopAdverts()
+  if rc==0 then
+    DbgMsg("Stop Adverts")
+  endif
+endfunc rc
+
+'//==============================================================================
+'//==============================================================================
+sub SetTxPower(txp as integer)
+  dim rc
+  DbgMsgVal("Set TxPower = ",txp)
+  rc=BleTxPowerSet(txp)
+  AssertResCode(rc,1205)
+endsub
+
+'//==============================================================================
+'//==============================================================================
+sub ShowConnParms(nCtx as integer)
+  dim rc
+  dim intrvl,sprvto,slat
+  rc= BleGetCurConnParms(nCtx,intrvl,sprvto,slat)
+  AssertResCode(rc,1240)
+  if rc==0 then
+    DbgMsgVal("Conn Interval",intrvl)
+    DbgMsgVal("Conn Supervision Timeout",sprvto)
+    DbgMsgVal("Conn Slave Latency",slat)
+  endif
+endsub
+
+
+'//==============================================================================
+'//==============================================================================
+sub SetDeviceName(st$ as string,wr as integer)
+  dim rc
+  rc = BleGapSvcInit(st$,wr,APPEARANCE,MIN_CONN_INTERVAL,MAX_CONN_INTERVAL,CONN_SUP_TIMEOUT,SLAVE_LATENCY)
+  AssertResCode(rc,2020)
+  InitAdvReports(advFlags)
+endsub
+
+'//==============================================================================
+'//==============================================================================
+sub GetDeviceName()
+  dn$ = BleGetDeviceName$()  
+  if (ENABLE_DEBUG_PRINTS!=0) then
+    print "Device name = ";dn$;"\n"
+  endif
+endsub
+
+
+'//==============================================================================
+'//==============================================================================
+function DiscSvcFirst( stHndl )
+  dim r
+  r=BleDiscServiceFirst(cHndl,stHndl,hndlUuid)
+endfunc r
+
+'//==============================================================================
+'//==============================================================================
+function DiscSvcNext()
+  dim r
+  r=BleDiscServiceNext(cHndl)
+endfunc r
+
+'//==============================================================================
+'//==============================================================================
+function DiscCharFirst( stHndl )
+  dim r
+  r=BleDiscCharFirst(cHndl,hndlUuid,stHndl,vHndlEn)
+endfunc r
+
+'//==============================================================================
+'//==============================================================================
+function DiscCharNext()
+  dim r
+  r=BleDiscCharNext(cHndl)
+endfunc r
+
+'//==============================================================================
+'//==============================================================================
+function DiscDescFirst( stHndl )
+  dim r
+  r=BleDiscDescFirst(cHndl,hndlUuid,stHndl)
+endfunc r
+
+'//==============================================================================
+'//==============================================================================
+function DiscDescNext()
+  dim r
+  r=BleDiscDescNext(cHndl)
+endfunc r
+
+'//==============================================================================
+'//==============================================================================
+function ReadAttr( aHndl )
+  dim r
+  r=BleGattcRead(cHndl,aHndl,vOffset)
+endfunc r
+
+'//==============================================================================
+'//==============================================================================
+function ReadAttrData(  )
+  dim r,aHndl,nOff,att$
+  r=BleGattcReadData(cHndl,aHndl,nOff,att$)
+  print "\n BleGattcReadData()"
+  if r==0 then
+    print "\n  connHandle : ";integer.h' cHndl
+    print "\n  AttrHandle : ";aHndl
+    print "\n  Offset     : ";nOff
+    print "\n  AttrData   : ";StrHexize$(att$)
+  else
+    print " failed with ";integer.h' r
+  endif
+endfunc r
+
+'//==============================================================================
+'//==============================================================================
+function ReadNotifyData(  )
+  dim r,chndl,aHndl,att$,dscd
+  r=BleGattcNotifyRead(cHndl,aHndl,att$,dscd)
+  print "\n BleGattcNotifyRead()"
+  if r==0 then
+    print "\n  connHandle : ";integer.h' cHndl
+    print "\n  AttrHandle : ";aHndl
+    print "\n  AttrData   : ";StrHexize$(att$)
+    print "\n  Discarded  : ";dscd
+  else
+    print " failed with ";integer.h' r
+  endif
+endfunc r
+
+'//==============================================================================
+'//==============================================================================
+function WriteAttr( aHndl )
+  dim r
+  r=BleGattcWrite(cHndl,aHndl,vOffset,ad$)
+endfunc r
+
+'//==============================================================================
+'//==============================================================================
+function WriteAttrCmd( aHndl )
+  dim r
+  r=BleGattcWriteCmd(cHndl,aHndl,vOffset,ad$)
+endfunc r
+
+'//==============================================================================
+'//==============================================================================
+function StrValHex( vl$,l )   // l = strlen(vl$)
+  dim v,i
+  v=0
+  l = l - 1
+  for i=0 to l step 2
+    v=v<<8
+    v=v+strhex2bin(vl$,i)
+  next
+endfunc v
+
+'//==============================================================================
+'// Expecting to see XX=nnn\n\r  where nnn =1 to 2 digit decimal number
+'//==============================================================================
+function OnUartCmd(stData$,datalen) as integer
+  dim rc
+  dim stRS$
+  dim vl$
+  dim vl,ln
+  dim rsp
+  rsp=0  '//assume OK response
+  if datalen >= 4 then
+
+    '//drop the terminating CR
+    datalen = datalen - 1
+    stData$ = left$(stData$,datalen)
+
+    stRS$ = strsplitleft$(stData$,3)
+    if     strcmp(stRS$,"hr ")==0 then  // heart rate in beats per minute
+      hrtRate = strvaldec(stData$)
+
+    elseif  strcmp(stRS$,"rr ")==0 then  // rr interval add
+      vl = strvaldec(stData$)
+      rc = AddRrData(vl)
+      if rc != 0 then
+        rsp = 1
+      endif
+
+    elseif strcmp(stRS$,"bl ")==0 then
+      vl = strvaldec(stData$)
+      if SetBattLevel(vl) != 0 then
+        rsp = 1
+      endif
+//*************************************************************
+    elseif strcmp(stRS$,"sf ")==0 then
+      rsp = DiscSvcFirst(strvaldec(stData$))
+
+    elseif strcmp(stRS$,"sne")==0 then
+      rsp = DiscSvcNext()
+
+    elseif strcmp(stRS$,"cf ")==0 then
+      rsp = DiscCharFirst(strvaldec(stData$))
+
+    elseif strcmp(stRS$,"cne")==0 then
+      rsp = DiscCharNext()
+
+    elseif strcmp(stRS$,"df ")==0 then
+      rsp = DiscDescFirst(strvaldec(stData$))
+
+    elseif strcmp(stRS$,"dne")==0 then
+      rsp = DiscDescNext()
+
+    elseif strcmp(stRS$,"uuc")==0 then
+      hndlUuid = 0
+
+    elseif strcmp(stRS$,"uu ")==0 then  //set svUuid with a 16 bit uuid
+      ln=strlen(stData$)
+      if ln == 4 then
+        vl = StrValHex(stData$,ln)
+        if vl==0 then
+          hndlUuid = 0
+        else
+          hndlUuid = BleHandleUuid16(vl)
+        endif
+      else
+        rsp = 1
+      endif
+      
+    elseif strcmp(stRS$,"uv ")==0 then  //set svUuid with a 128 bit uuid
+      ln=strlen(stData$)
+      if ln == 32 then
+        stData$ = StrDehexize$(stData$)
+        hndlUuid = BleHandleUuid128(stData$)
+      else
+        rsp = 1
+      endif
+      
+    elseif strcmp(stRS$,"rg ")==0 then  //set xUuid with a 128 bit uuid so that it gets registered
+      ln=strlen(stData$)
+      if ln == 32 then
+        stData$ = StrDehexize$(stData$)
+        xUuid = BleHandleUuid128(stData$)
+      else
+        rsp = 1
+      endif
+      
+    elseif strcmp(stRS$,"z1 ")==0 then  // set connection handle to artbitrary value nnnn
+      cHndl = strvaldec(stData$)
+
+    elseif strcmp(stRS$,"eh ")==0 then  // set vHndlEn to nnnn
+      vHndlEn = strvaldec(stData$)
+
+    elseif strcmp(stRS$,"of ")==0 then  // set vOffset to nnnn
+      vOffset = strvaldec(stData$)
+
+    elseif strcmp(stRS$,"ar ")==0 then  // gattc read ( handle =nnnn, offset=vOffset)
+      rsp = ReadAttr(strvaldec(stData$))
+      
+    elseif strcmp(stRS$,"att")==0 then
+      rsp = ReadAttrData()
+
+    elseif strcmp(stRS$,"ntf")==0 then   //Call BleGattcNotifyRead()
+      rsp = ReadNotifyData()
+
+    elseif strcmp(stRS$,"aa ")==0 then  //ad$ = strdehexize$(hh..hh)
+      //print "\nstData$ = ";stData$
+      ad$ = StrDehexize$(stData$)
+      //print "\nad$ = ";ad$
+      
+    elseif strcmp(stRS$,"w0 ")==0 then  //gattc write ( handle =nnnn, offset=vOffset, stData=ad$)
+      rsp = WriteAttr(strvaldec(stData$))
+      
+    elseif strcmp(stRS$,"w1 ")==0 then  //gattc write command ( handle =nnnn, offset=vOffset, stData=ad$)
+      rsp = WriteAttrCmd(strvaldec(stData$))
+      
+'//     go nnnn           -- open gatt client with nnnn hvx data buffer and flags
+'//                          flags = nnnn % 1000
+'//                          hvx data buffer len = nnnn / 1000
+    elseif strcmp(stRS$,"go ")==0 then
+      vl = strvaldec(stData$)
+      rsp = BleGattcOpen((vl/1000), (vl%1000))
+      
+    elseif strcmp(stRS$,"gcl")==0 then  //close gatt client
+      BleGattcClose()      
+
+    elseif strcmp(stRS$,"pu0")==0 then  // svcUuid = hndlUuid (uu or uv command)/hndlUuid reset to 0
+      svcUuid = hndlUuid 
+      hndlUuid = 0
+    elseif strcmp(stRS$,"p0 ")==0 then  // svcInst = hhhh
+      svcInst = strvaldec(stData$)
+
+    elseif strcmp(stRS$,"pu1")==0 then  // chrUuid = hndlUuid (uu or uv command)/hndlUuid reset to 0
+      chrUuid = hndlUuid      
+      hndlUuid = 0
+    elseif strcmp(stRS$,"p1 ")==0 then  // chrInst = hhhh
+      chrInst = strvaldec(stData$)
+
+    elseif strcmp(stRS$,"pu2")==0 then  // dscUuid = hndlUuid (uu or uv command)/hndlUuid reset to 0
+      dscUuid = hndlUuid      
+      hndlUuid = 0
+    elseif strcmp(stRS$,"p2 ")==0 then  // dscInst = hhhh
+      dscInst = strvaldec(stData$)
+
+    elseif strcmp(stRS$,"fnc")==0 then  // invoke BleGattcFindChar(. svcUuid svcInst chrUuid chrInst )
+      rsp = BleGattcFindChar(cHndl,svcUuid,svcInst,chrUuid,chrInst)
+
+    elseif strcmp(stRS$,"fnd")==0 then  // invoke BleGattcFindDesc(. svcUuid svcInst chrUuid chrInst dscUuid dscInst)
+      rsp = BleGattcFindDesc(cHndl,svcUuid,svcInst,chrUuid,chrInst,dscUuid,dscInst)
+      
+//*************************************************************
+    elseif strcmp(stRS$,"db ")==0 then
+      DbgInfo(strvaldec(stData$))
+
+    elseif strcmp(stRS$,"tp ")==0 then
+      SetTxPower(strvaldec(stData$))
+
+    elseif strcmp(stRS$,"dc ")==0 then
+      BleConfigDcDc(strvaldec(stData$))
+
+    elseif strcmp(stRS$,"sc ")==0 then
+      sensCntct = strvaldec(stData$)
+
+    elseif strcmp(stRS$,"dr ")==0 then
+      SetDeviceName(stData$,0)
+
+    elseif strcmp(stRS$,"dw ")==0 then
+      SetDeviceName(stData$,1)
+
+    elseif strcmp(stRS$,"dev")==0 then  //get and print the device name
+      GetDeviceName()
+
+    elseif strcmp(stRS$,"dis")==0 then  //disconnect
+      if Disconnect(hConn) != 0 then
+        rsp = 1
+      endif
+
+    elseif strcmp(stRS$,"ky ")==0 then
+      vl = strvaldec(stData$)
+      rc = SecSendPassKey(hConn,vl)
+
+    elseif  strcmp(stRS$,"ai ")==0 then  // advertising interval in milliseconds
+      if SetAdvertInt(strvaldec(stData$)) == 0 then
+        rsp = 1
+      endif
+
+    elseif  strcmp(stRS$,"at ")==0 then  // advertising timeout in milliseconds
+      if SetAdvertTout(strvaldec(stData$)) == 0 then
+        rsp = 1
+      endif
+
+    elseif strcmp(stRS$,"fg ")==0 then   //Flags AD value (0..3) see BLE_DISCOVERABILITY_xxx
+      advFlags = strvaldec(stData$)
+
+    elseif strcmp(stRS$,"ad ")==0 then
+      vl = strvaldec(stData$)
+      if vl==0 then
+        rc= StopAds()
+      else
+        vl=vl-1
+        rc= StartAds(vl)
+      endif
+      if rc != 0 then
+        rsp = 1
+      endif
+
+    elseif strcmp(stRS$,"ma ")==0 then
+      vl$ = strdehexize$(stData$)
+      vl=strlen(vl$)
+      if vl!=7 then
+        rsp = 1
+      else
+        addr$ = vl$
+      endif
+
+    elseif strcmp(stRS$,"sen")==0 then
+      if SendHrData() != 0 then
+        rsp = 1
+      endif
+
+    elseif strcmp(stRS$,"txp")==0 then
+      DbgMsgVal("Current Tx Power = ",sysinfo(2008))
+
+    elseif strcmp(stRS$,"qui")==0 then
+      reset(0)
+      exitfunc 0
+
+    elseif strcmp(stRS$,"sto")==0 then
+      stop
+
+    elseif  strcmp(stRS$,"in ")==0 then  // minimum interval (us) for conn parameters
+      minint = strvaldec(stData$)
+
+    elseif  strcmp(stRS$,"ix ")==0 then  // maximum interval (us) for conn parameters
+      maxint = strvaldec(stData$)
+
+    elseif  strcmp(stRS$,"st ")==0 then  // supervision teimout (us) for conn parameters
+      sprtout = strvaldec(stData$)
+
+    elseif  strcmp(stRS$,"sl ")==0 then  // slave latency for conn parameters
+      slatncy = strvaldec(stData$)
+
+    elseif strcmp(stRS$,"neg")==0 then
+      rc = ConnNewParms(hConn)
+      AssertResCode(rc,1250)
+      if rc != 0 then
+        rsp = 1
+      endif
+
+    else
+      rsp = 1
+
+    endif
+
+  else
+    rsp = 1
+
+  endif
+
+  '// send a response back to the user
+  UartRsp(rsp)
+
+endfunc 1
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+'//==============================================================================
+'// This handler is called when there is a BLE message
+'//==============================================================================
+function HandlerBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER) as integer
+
+  '// Inform libraries
+  ConnMngrOnBleMsg(nMsgId,nCtx)
+  AdvMngrOnBleMsg(nMsgId,nCtx)
+
+  '// Let the library deal with it first
+  HrsOnBleMsg(nMsgId,nCtx)
+
+  select nMsgId
+  case BLE_EVBLEMSGID_CONNECT
+    cHndl = nCtx
+    print " --- Connect : ";integer.h' nCtx;"\n"
+     ShowConnParms(nCtx)
+
+  case BLE_EVBLEMSGID_DISCONNECT
+    print " --- Disconnect : ";integer.h' nCtx;"\n"
+
+  //case BLE_EVBLEMSGID_HRS_NOTIFICATION_STATE
+  //  DbgMsgVal(" --- Hrs Notification : ",nCtx)
+
+  case BLE_EVBLEMSGID_DEVICENAME_WRITE
+    DbgMsg(" --- DevName Write : ")
+
+  case BLE_EVBLEMSGID_DISPLAY_PASSKEY
+    DbgMsgVal("Display Pairing Passkey ",nCtx)
+
+  case BLE_EVBLEMSGID_NEW_BOND
+    DbgMsg(" +++ New Bond")
+
+  case BLE_EVBLEMSGID_UPDATED_BOND
+    DbgMsg(" +++ Updated Bond")
+
+  case BLE_EVBLEMSGID_ENCRYPTED
+    DbgMsg(" +++ Encrypted Connection")
+
+  case BLE_EVBLEMSGID_CONN_TO_BONDED_MASTER
+    DbgMsgVal(" -- Conn to Bonded Master ",nCtx)
+
+  case BLE_EVBLEMSGID_AUTH_KEY_REQUEST
+    DbgMsgVal(" +++ Auth Key Request, type=",nCtx)
+
+  case BLE_EVBLEMSGID_CONN_PARMS_UPDATE
+     ShowConnParms(nCtx)
+
+  case BLE_EVBLEMSGID_CONN_PARMS_UPDATE_FAIL
+    DbgMsg(" ??? Conn Parm Negotiation FAILED")
+
+  case else
+    DbgMsgVal("Unknown Ble Msg ",nMsgId)
+  endselect
+endfunc 1
+
+'//==============================================================================
+'// This handler is called when there is a CHARCCCD message
+'//==============================================================================
+function HandlerCharCccd(BYVAL hChar AS INTEGER, BYVAL nVal AS INTEGER) as integer
+  if hChar == chHrsMeas then
+    DbgMsgVal(" --- Hrs Notification : ",nVal)
+  else
+    DbgMsgVal(" --- New CCCD : ",nVal)
+  endif
+endfunc 1
+
+'//==============================================================================
+'// This handler is called when data has arrived at the serial port
+'//==============================================================================
+function HandlerUartRx() as integer
+  dim nMatch
+  dim stData$
+
+  nMatch=UartReadMatch(stRsp$,13)
+  if nMatch!=0 then
+    stData$ = strsplitleft$(stRsp$,nMatch)
+    exitfunc OnUartCmd(stData$,nMatch)
+  endif
+endfunc 1
+
+'//==============================================================================
+'// This handler is called when an advertisment has timed out
+'//==============================================================================
+function HandlerBlrAdvTimOut() as integer
+
+  if AdvMngrOnAdvTimeOut() == 0 then
+
+    DbgMsg( "\nAdvert stopped via timeout" )
+    '//DbgMsg( "\n   - could use SystemStateSet(0) to switch off" )
+
+    '//------------------------------------------------------------
+    '//  Switch off the system - requires a power cycle to recover
+    '//------------------------------------------------------------
+    '//  rc = SystemStateSet(0)
+    '//  AssertResCode(rc,1199)
+  endif
+
+endfunc 1
+
+'//==============================================================================
+'//==============================================================================
+function HandlerPrimSvc(cHndl,svcUuid,sHndl,eHndl) as integer
+    print "\nEVDISCPRIMSVC"
+    print "\n  ::connHandle  ";integer.h' cHndl
+    print "\n  ::svcUuid     ";integer.h' svcUuid
+    print "\n  ::startHandle ";sHndl
+    print "\n  ::endHandle   ";eHndl
+endfunc 1
+
+'//==============================================================================
+'//==============================================================================
+function HandlerCharDisc(cHndl,cUuid,cProp,hVal,isUuid) as integer
+    print "\nEVDISCCHAR"
+    print "\n  ::connHandle  ";integer.h' cHndl
+    print "\n  ::charUuid    ";integer.h' cUuid
+    print "\n  ::charProps   ";integer.h' cProp
+    print "\n  ::valueHandle ";hVal
+    print "\n  ::IncSvcUuid  ";integer.h' isUuid
+endfunc 1
+
+'//==============================================================================
+'//==============================================================================
+function HandlerDescDisc(cHndl,cUuid,hndl) as integer
+    print "\nEVDISCDESC"
+    print "\n  ::connHandle  ";integer.h' cHndl
+    print "\n  ::descUuid    ";integer.h' cUuid
+    print "\n  ::descHandle  ";hndl
+endfunc 1
+
+'//==============================================================================
+'//==============================================================================
+function HandlerAttrRead(cHndl,aHndl,nSts) as integer
+    print "\nEVATTRREAD"
+    print "\n  ::connHandle  ";integer.h' cHndl
+    print "\n  ::attrHandle  ";aHndl
+    print "\n  ::status      ";nSts
+endfunc 1
+
+'//==============================================================================
+'//==============================================================================
+function HandlerGattcTout(cHndl) as integer
+    print "\nEVGATTCTOUT"
+    print "\n  ::connHandle  ";integer.h' cHndl
+endfunc 1
+
+'//==============================================================================
+'//==============================================================================
+function HandlerAttrWrite(cHndl,aHndl,nSts) as integer
+    print "\nEVATTRWRITE"
+    print "\n  ::connHandle  ";integer.h' cHndl
+    print "\n  ::attrHandle  ";aHndl
+    print "\n  ::status      ";nSts
+endfunc 1
+
+'//==============================================================================
+'//==============================================================================
+function HandlerNotifyBuf() as integer
+  print "\nEVNOTIFYBUF Event"
+endfunc 1
+
+'//==============================================================================
+'//==============================================================================
+function HandlerAttrNotify() as integer
+  print "\nEVATTRNOTIFY Event"
+endfunc 1
+
+'//==============================================================================
+'//==============================================================================
+function HandlerFindChar(cHndl,cProp,hVal,isUuid) as integer
+    print "\nEVFINDCHAR"
+    print "\n  ::connHandle  ";integer.h' cHndl
+    print "\n  ::charProps   ";integer.h' cProp
+    print "\n  ::valueHandle ";hVal
+    print "\n  ::IncSvcUuid  ";integer.h' isUuid
+endfunc 1
+
+'//==============================================================================
+'//==============================================================================
+function HandlerFindDesc(cHndl,hndl) as integer
+    print "\nEVFINDDESC"
+    print "\n  ::connHandle  ";integer.h' cHndl
+    print "\n  ::descHandle  ";hndl
+endfunc 1
+
+'//******************************************************************************
+'// Equivalent to main() in C
+'//******************************************************************************
+
+'//------------------------------------------------------------------------------
+'// Enable synchronous event handlers
+'//------------------------------------------------------------------------------
+OnEvent  EVUARTRX           call HandlerUartRx
+OnEvent  EVBLEMSG           call HandlerBleMsg
+OnEvent  EVBLE_ADV_TIMEOUT  call HandlerBlrAdvTimOut
+OnEvent  EVCHARCCCD         call HandlerCharCccd
+OnEvent  EVDISCPRIMSVC      call HandlerPrimSvc
+OnEvent  EVDISCCHAR         call HandlerCharDisc
+OnEvent  EVDISCDESC         call HandlerDescDisc
+OnEvent  EVATTRREAD         call HandlerAttrRead
+OnEvent  EVATTRWRITE        call HandlerAttrWrite
+OnEvent  EVGATTCTOUT        call HandlerGattcTout
+OnEvent  EVNOTIFYBUF        call HandlerNotifyBuf
+OnEvent  EVATTRNOTIFY       call HandlerAttrNotify
+OnEvent  EVFINDCHAR         call HandlerFindChar
+OnEvent  EVFINDDESC         call HandlerFindDesc
+
+'//------------------------------------------------------------------------------
+'// Initialise and then wait for events
+'//------------------------------------------------------------------------------
+if (AUTO_STARTUP & 1) != 0 then
+  //Create Advert packets and register services
+  OnStartup()
+endif
+if (AUTO_STARTUP & 2) != 0 then
+  //Start advertising
+  dim rc
+  rc=StartAds(ADV_IND)
+endif
+
+'//Send user prompt for uart based command interface
+msg$="\n\r"
+UartMsg(msg$)
+msg$=DEVICENAME
+UartMsg(msg$)
+//msg$="\n\r"
+//UartMsg(msg$)
+
+'//Send an OK response
+UartRsp(0)
+

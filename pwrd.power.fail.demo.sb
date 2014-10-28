@@ -1,0 +1,110 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+'// +++++  which consists of all characters up to the first . and excluding it ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// Simple program that reads the supply volts in mV and prints it to the UART
+'// and will then wait for BLE_EVBLEMSGID_POWER_FAILURE_WARNING event
+'//
+'// 02/03/2013
+'//
+'//******************************************************************************
+
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+        '//Set this to 0 to disable all debugging messages
+#define ENABLE_DEBUG_PRINTS                  1
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+#include "lib\ble.sblib"
+#include "lib\debugging.routines.sblib"
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim rc
+dim mv
+dim lastmv
+dim count
+
+
+count = 0
+lastmv = -1
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+'//==============================================================================
+'// This handler is called when TIMER 0 expires
+'//==============================================================================
+function HandlerTimer0() as integer
+  mv=ReadPwrSupplyMv()
+  if lastmv != mv then
+    print "\n --- Supply voltage is ";mv;"mV"
+    lastmv = mv
+  endif
+endfunc 1
+
+'//==============================================================================
+'// This handler is called when there is a BLE message
+'//==============================================================================
+function HandlerBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER) as integer
+
+  select nMsgId
+
+  case BLE_EVBLEMSGID_POWER_FAILURE_WARNING
+    DbgMsgVal("\n --- Power Fail Warning ",nCtx)
+    mv=ReadPwrSupplyMv()
+    print "\n --- Supply voltage is ";mv;"mV"
+    count = count + 1
+    print "\n --- count is ";count
+    if count > 3 then
+      exitfunc 0
+    endif
+
+  case else
+    DbgMsgVal("Unknown Ble Msg", nMsgId)
+  endselect
+endfunc 1
+
+
+'//******************************************************************************
+'// Equivalent to main() in C
+'//******************************************************************************
+
+OnEvent  EVBLEMSG           call HandlerBleMsg
+OnEvent  EVTMR0             call HandlerTimer0
+
+mv=ReadPwrSupplyMv()
+print "\n\nSupply voltage is ";mv;"mV\n"
+
+mv=2700
+rc=SetPwrSupplyThreshMv(mv)
+AssertResCode(rc,1100)
+
+print "\nWaiting for power supply to fall below ";mv;"mV"
+
+'// poll sensor on a timer
+TimerStart(0,500,1)
+
+'//------------------------------------------------------------------------------
+'// Wait for a synchronous event.
+'// An application can have multiple <WaitEvent> statements
+'//------------------------------------------------------------------------------
+waitevent

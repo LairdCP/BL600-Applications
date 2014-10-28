@@ -1,0 +1,816 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  Customers should not make modifications to this file. If this is    ++
+'// +++++  essential, it is recommended that the modified version of this file ++
+'// +++++  is submitted to Laird, so that your changes are tracked.            ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// $autorun$.iBeacon.sblib (MUST be #included in a top level .sb file)
+'//
+'//
+'//   ###################################################################################
+'//   #              Version history in reverse chronological order                     #
+'//   ###################################################################################
+'//   #                                                                                 #
+'//   #  -----------------------------------------------------------------------------  #
+'//   #  ::Changelog:: 06/12/13 -> 2.1.0                                                #
+'//   #  -----------------------------------------------------------------------------  # 
+'//   #  - Refactored so that it is split in two files                                  #
+'//   #                                                                                 #                     
+'//   #  -----------------------------------------------------------------------------  #
+'//   #  ::Changelog:: 05/12/13 -> 2.1.0                                                #
+'//   #  -----------------------------------------------------------------------------  # 
+'//   #  - Refactored so that using #define HANDLERCHARVAL this app will work in all    #
+'//   #    firmware versions                                                            #
+'//   #  - Changed default transmit power to +4dBm                                      #
+'//   #  - removed SWREV #defined and using APP_VERSION instead                         #
+'//   #                                                                                 #                     
+'//   #  -----------------------------------------------------------------------------  #
+'//   #  ::Changelog:: 03/12/13 -> 2.0.0                                                #
+'//   #  -----------------------------------------------------------------------------  # 
+'//   #  - Removed BleAdvertStop() from HndlrBleAdvTmt() - redundant                    #                             
+'//   #  - Validating advIntvl in HndlrCharVal() now instead of in StartAdvertising()   #
+'//   #                                                                                 #                     
+'//   #  -----------------------------------------------------------------------------  #
+'//   #  ::Changelog:: 02/12/13 -> 2.0.0                                                #
+'//   #  -----------------------------------------------------------------------------  # 
+'//   #  - Added ability to change device name via extra char and save it to memory     #
+'//   #  --- Changed char UUIDs to accommodate new char                                 #
+'//   #  --- Removed global variable 'dn$'                                              #
+'//   #  --- GAP Device Name will mirror custom Device Name char                        #                                     
+'//   #                                                                                 #
+'//   #  - Rewrote HndlrCharVal() with a case statement                                 #
+'//   #                                                                                 #
+'//   #  -----------------------------------------------------------------------------  #
+'//   #  ::Changelog:: 29/11/13                                                         #
+'//   #  -----------------------------------------------------------------------------  # 
+'//   #  - Added UUIDs to description below                                             #
+'//   #  - Changed HWREV define to "1.0"                                                #
+'//   #  - Changed Major and Minor defines                                              #
+'//   #  - Added units to defines for char values & indexes                             #
+'//   #  - Changed description of AssertRC (result code and line number)                #
+'//   #  - Added new chars to comments on charHndles[]                                  #
+'//   #  - Removed UUID + Tx Power from possible formats in CreateIBeaconAD$()          #
+'//   #  - Changed NewChar() - Max data length is now derived in sub                    #
+'//   #  - Forcibly writing leftmost 20 chars of device name to memory                  #
+'//   #  - Changed name of Calibration Value char to Calibrated RSSI Value              #
+'//   #  - Changed adv interval, time out, remain conn time to 1 byte                   #
+'//   #  - Changed TxPower char for adopted Tx Power Level char                         #
+'//   #  - StartAdvertising() - Convert Tmt, took out redundant if statement            #
+'//   #  - Added empty if statement "if ble connected do nothing" for BleAdvertStart    #
+'//   #  - Added TxPower validation                                                     #
+'//   #  - Now setting advTmt with remConnTime and using timeout event instead of timer #
+'//   #  - Removed need for Button. RemConnTime=0 is now invalid                        #
+'//   #  - Added description of characteristics, how to use and UUIDs (see below)       #
+'//   #  - Added the APP_VERSION #define to track version                               #
+'//   #  - Added BleSvcRegDevInfo() to register device info service with GATT server    #
+'//   #                                                                                 #
+'//   #                                                                                 #
+'//   ###################################################################################
+'//
+'//
+'//   #######################################################################################
+'//   #                                                                                     #
+'//   #  This sample app turns the BL600 into an iBeacon by creating and advertising with   #
+'//   #  an Advertising Record (AD) that can be used by a receiving device for the intended #
+'//   #  use case.                                                                          #
+'//   #                                                                                     #
+'//   #  The receiver can connect to the BL600 to change the iBeacon data and some of the   #
+'//   #  advertising parameters via the characteristics described below.                    #
+'//   #                                                                                     #
+'//   #                                                                                     #
+'//   #  ---------------------------------------------------------------------------------  #
+'//   #  ::Characteristics::                                                                #
+'//   #  ---------------------------------------------------------------------------------  #
+'//   #                                                                                     # 
+'//   #  [Device Name]:                                569a2010-b87f-490c-92cb-11ba5ea5167c #
+'//   #      - BL600's Device name as seen by other devices                                 #
+'//   #                                                                                     #
+'//   #  [AD Format]:                                  569a2011-b87f-490c-92cb-11ba5ea5167c #
+'//   #      - Specifies the format of the Advertising Record (AD)                          #
+'//   #     - Length: 1 byte                                                                #
+'//   #     --> 0       : Full AD                                                           #
+'//   #     --> 1       : UUID + Major + Minor                                              #
+'//   #     --> 2       : UUID                                                              #
+'//   #     --> Default : 0                                                                 #
+'//   #                                                                                     #
+'//   #  [iBeacon UUID]:                               569a2012-b87f-490c-92cb-11ba5ea5167c #
+'//   #     - Uniquely defines iBeacon type or company                                      #
+'//   #     - Length: 16 bytes                                                              # 
+'//   #                                                                                     #
+'//   #  [Major Value]:                                569a2013-b87f-490c-92cb-11ba5ea5167c #
+'//   #     - Differentiates iBeacons with the same UUID                                    #
+'//   #     - Length: 2 bytes                                                               #
+'//   #                                                                                     #
+'//   #  [Minor Value]:                                569a2014-b87f-490c-92cb-11ba5ea5167c #
+'//   #     - Differentiates iBeacons with the same UUID and major value                    #
+'//   #     - Length: 2 bytes                                                               #
+'//   #                                                                                     #
+'//   #  [Tx Power]:                                                                        #
+'//   #     - Transmitting Power - Adopted Characteristic                                   #
+'//   #     - Length: 1 byte                                                                #
+'//   #     - Unit: dBm (signed 8 bit)                                                      #
+'//   #     - Valid values: -55, -30, -20, -16, -12, -8, -4, 0, 4                           #                          
+'//   #          hex values- C9   E2   EC   F0   F4  F8  FC  0  4                           #                          
+'//   #                                                                                     #
+'//   #  [Advertising Interval]:                       569a2015-b87f-490c-92cb-11ba5ea5167c #
+'//   #     - Time between two advertisement events                                         #
+'//   #     - Length: 1 byte (unsigned 8 bit)                                               #
+'//   #     - Unit:  20 ms (e.g. 50 will give 1000ms)                                       #
+'//   #     - Note: Advertising Interval shall be no lower than 100 ms                      #
+'//   #                                                                                     #  
+'//   #  [Advertising Time out]:                       569a2016-b87f-490c-92cb-11ba5ea5167c #
+'//   #     - Time in minutes after which module stops advertising, 0 == forever            #
+'//   #     - Length: 1 byte  (unsigned 8 bit)                                              #
+'//   #     - Unit:  minutes (e.g. 10 will give 600000ms)                                   #
+'//   #                                                                                     #
+'//   #  [Calibrated RSSI Value]:                      569a2017-b87f-490c-92cb-11ba5ea5167c #
+'//   #     - RSSI measured 1m from BL600 when Tx Power = 4 dBm                             #
+'//   #     - Length: 1 byte (signed 8 bit)                                                 #
+'//   #     - Unit:  dBm   (eg -128 = 0x80 -60==0xC4 -1==0xFF )                             #
+'//   #                                                                                     # 
+'//   #  [Remain Connectible Time]:                    569a2018-b87f-490c-92cb-11ba5ea5167c #    
+'//   #     - Time to advertise with type 0 (connectible)                                   #
+'//   #     - Length: 1 byte (signed 8 bit)                                                 #
+'//   #     - Unit:  seconds (e.g. 10 will give 10000ms)                                    #
+'//   #     - Valid values: 1-255                                                           #
+'//   #                                                                                     #                            
+'//   #                                                                                     #
+'//   #                                                                                     #
+'//   #  ---------------------------------------------------------------------------------  #
+'//   #  ::UUIDs::                                                                          #
+'//   #  Format: 569aABCD-b87f-490c-92cb-11ba5ea5167c                                       #
+'//   #          Where 0xABCD is a 16 bit offset from the Laird Base UUID                   #
+'//   #  ---------------------------------------------------------------------------------  #                                             
+'//   #  - Laird Base:                     569a0000-b87f-490c-92cb-11ba5ea5167c             #
+'//   #  - iBeacon Service:                569a1900-b87f-490c-92cb-11ba5ea5167c             #
+'//   #  - Device Name Char:               569a2010-b87f-490c-92cb-11ba5ea5167c             #
+'//   #  - Format Char:                    569a2011-b87f-490c-92cb-11ba5ea5167c             #
+'//   #  - iBeacon UUID Char:              569a2012-b87f-490c-92cb-11ba5ea5167c             #
+'//   #  - Major Char:                     569a2013-b87f-490c-92cb-11ba5ea5167c             #
+'//   #  - Minor Char:                     569a2014-b87f-490c-92cb-11ba5ea5167c             #
+'//   #  - Advertising Interval Char:      569a2015-b87f-490c-92cb-11ba5ea5167c             #
+'//   #  - Advertising Time out Char:      569a2016-b87f-490c-92cb-11ba5ea5167c             #
+'//   #  - Calibrated RSSI Value Char:     569a2017-b87f-490c-92cb-11ba5ea5167c             #
+'//   #  - Remain Connectible Time Char:   569a2018-b87f-490c-92cb-11ba5ea5167c             #
+'//   #                                                                                     #
+'//   #  :Adopted Characteristics: (16 bit value as offset to Bluetooth SIG Base UUID)      #
+'//   #  - Tx Power Level:                 0x2A07                                           #                                                                      
+'//   #                                                                                     #
+'//   #                                                                                     #
+'//   #                                                                                     #
+'//   #  --------------------------------------------------------------------------------   #
+'//   #  ::How to use::                                                                     #
+'//   #  --------------------------------------------------------------------------------   #    
+'//   #                                                                                     #                  
+'//   #  [Change iBeacon Data & Connection Parameters]                                      #
+'//   #                                                                                     #
+'//   #  ::Android::                                                                        #
+'//   #  With the app "nRF Master Control Panel", you can view the AD by tapping "iBeacon"  #
+'//   #  when it appears in the device list. You connect to the BL600 to change             #
+'//   #  characteristic values by tapping the "Connect" button. (See Examples below)        #
+'//   #                                                                                     #
+'//   #  ::iOS::                                                                            #
+'//   #  With the app "LightBlue", you can connect to the BL600 to change characteristic    #                                                                 
+'//   #  values by tapping "iBeacon" when it appears under "Scanning for Peripherals...".   #
+'//   #  (See Examples below)                                                               #
+'//   #                                                                                     #
+'//   #                                                                                     #
+'//   #  [Test iBeacon Functionality]                                                       #
+'//   #                                                                                     #
+'//   #  When advertising, the app "iBeacon Locate" on Android and its iOS equivalent,      #
+'//   #  "Locate for iBeacon" will identify the BL600 as an iBeacon and display it's UUID,  #
+'//   #  major and minor values, the RSSI and an approximate distance from the iBeacon.     #
+'//   #                                                                                     #
+'//   #  Tapping on the device under "Visible iBeacons" will allow you to calibrate it for  #                                                                                 
+'//   #  this app to give you a more accurate reading of the distance.                      #
+'//   #                                                                                     #
+'//   #  It is recommended that you calibrate the BL600 as well by setting the TxPower      #
+'//   #  characteristic value to 4 dBm and measuring the RSSI on another device that is     #
+'//   #  1 metre away. Update the Calibrated RSSI Value char with this measured RSSI        #
+'//   #                                                                                     #
+'//   #  ::Note:: - This Android/iOS app recognises iBeacons with any one of the following  #
+'//   #             Apple defined UUIDs:                                                    #
+'//   #                                                                                     #
+'//   #             e2c56db5-dffb-48d2-b060-d0f5a71096e0                                    #                                   
+'//   #             5a4bcfce-174e-4bac-a814-092e77f6b7e5                                    #                                     
+'//   #             74278bda-b644-4520-8f0c-720eaf059935                                    #                                    
+'//   #                                                                                     #                                    
+'//   #           - The custom Device Name characteristic must be used to change the        #                                    
+'//   #             device name and NOT the one in the GAP service                          #                                    
+'//   #                                                                                     #
+'//   #                                                                                     #
+'//   #  [Examples]                                                                         #
+'//   #  --- To change the Major value to 1551 (0x060F):                                    #
+'//   #   1. Connect to iBeacon                                                             #
+'//   #   2. Select the iBeacon service (569a1900-b87f-490c-92cb-11ba5ea5167c)              #                                    
+'//   #   3. Select the Major characteristic (569a2011b87f-490c-92cb-11ba5ea5167c)          #                                                                       
+'//   #   4. Write HEX value 0x060F                                                         #
+'//   #   5. Disconnect from the iBeacon                                                    #
+'//   #   6. AD will now contain new Major value at position 10                             #
+'//   #                                                                                     #
+'//   #  --- To set the transmitting power to -50 dBm (0xFFFFFFCE in two's complement)      #
+'//   #   1. Connect to iBeacon                                                             #
+'//   #   2. Select the iBeacon service (569a1900-b87f-490c-92cb-11ba5ea5167c)              #                                    
+'//   #   3. Select the Tx Power characteristic (569a2013-b87f-490c-92cb-11ba5ea5167c)      #                                                                      
+'//   #   4. Write HEX value 0xCE                                                           #
+'//   #   5. Disconnect from the iBeacon                                                    #
+'//   #   6. BL600 will now advertise with Tx power of -50                                  #
+'//   #                                                                                     #
+'//   #                                                                                     #
+'//   #######################################################################################
+'//    
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+        '//Default device name to advertise with which can be changed via
+        '//characteristic 569a2010-b87f-490c-92cb-11ba5ea5167c
+#define DEVICENAME                           "Laird iBeacon"
+
+        '// Laird Technologies 128 bit Base UUID
+#define LT_BASE_UUID                         "\56\9a\00\00\b8\7f\49\0c\92\cb\11\ba\5e\a5\16\7c\"
+        '// Service 16 bit UUID
+#define IBEACON_SVC_UUID                     0x1900
+        '// Company ID - currently Apple Inc
+#define COMPANY_ID                           0x004C
+        '// AD Data Type 2 = iBeacon
+#define BEACON_DATA_TYPE                     2
+
+#define ADV_MIN_INTERVAL_MS                  100  //should NOT be < 100
+#define ADV_INTERVAL_SCALER                  20                   
+
+        '// Array index for device name
+#define DVC_NME_INDEX                        0
+        '// Array index for format
+#define FORMAT_INDEX                         1
+        '// Array index for UUID value 
+#define UUID_INDEX                           2
+        '// Array index for Major value
+#define MAJOR_INDEX                          3
+        '// Array index for Minor value
+#define MINOR_INDEX                          4
+        '// Array index for TxPower value
+#define TXPOWER_INDEX                        5
+        '// Array index for Interval (supplied in 20ms units)
+#define ADV_INTVL_INDEX                      6
+        '//Array index for Time out (supplied as minutes)
+#define ADV_TMT_INDEX                        7 
+        '//Array index for Calibration Value 
+#define CAL_VAL_INDEX                        8
+        '// Array index for Remain Connectible Time (supplied in seconds)
+#define REM_CONN_TME_INDEX                   9
+
+#define MAX_DEVNAME_CHRS_IN_ADVERT            0
+        '//DiscoverableMode (2==General)
+#define DISCOVERY_MODE                       2
+        '//Advert Type 0 - Invites connection requests
+#define ADV_IND                             0        
+        '//Advert Type 2 - Invites scan request for more advert data
+#define ADV_SCAN_IND                         2
+
+        '// Minimum acceptable connection interval (0.5 seconds)
+#define MIN_CONN_INTERVAL                    100000
+        '// Maximum acceptable connection interval (1 second).
+#define MAX_CONN_INTERVAL                    200000
+        '// Slave latency -- number of conn events that can be missed
+        '// Effective Conn interval will be (SLAVE_LATENCY+1)*ACTUAL_CONN_INTERVAL
+#define SLAVE_LATENCY                        0
+        '// Connection supervisory timeout (4 seconds) - max 32 seconds
+#define CONN_SUP_TIMEOUT                     4000000                   
+        '//EvBleMsg ID for a BLE disconnection event
+#define BLE_DISCONNECTED                     1
+        '//EvBleMsg ID when device name is written to
+#define DEVICENAME_WRITTEN                   21
+        '//Record number for device name
+#define DEVICENAME_REC_NUM                   20
+        '//Number of characteristics 
+#define NUM_OF_CHARS                         10
+
+        '//Min/max device names allowed to arrive via characteristic DVC_NME_INDEX
+#define MIN_DEVICENAME_LEN                   4 
+#define MAX_DEVICENAME_LEN                   20
+
+
+        '//Ble is connected error
+#define BLE_IS_CONNECTED                     0x604C
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+DIM rc                      '//resultcode
+DIM advRpt$                 '//advert report
+DIM scnRpt$                 '//scan report
+DIM dta$[NUM_OF_CHARS]       '//Array of characteristic value attributes
+DIM hSvc                   '//Service handler
+DIM dtaLen[NUM_OF_CHARS]     '//Array of valid data lengths for each char
+DIM charHndles[NUM_OF_CHARS]  '//array of characteristic handles
+                            '// 0 : Device Name
+                            '// 1 : Format 
+                            '// 2 : iBeacon UUID 
+                            '// 3 : iBeacon Major 
+                            '// 4 : iBeacon Minor 
+                            '// 5 : iBeacon TxPower (Adopted Char from Bluetooth SIG)
+                            '// 6 : Advertising Interval
+                            '// 7 : Advert Time out
+                            '// 8 : Calibrated RSSI Value
+                            '// 9 : Remain Connectible Time
+                            '//---------------------------------------
+DIM newCfg                  '//Will be non-zero if characteristics were written to
+                            '//while in a connection
+                            
+'//******************************************************************************
+'// Initialise Global Variable
+'//******************************************************************************
+newCfg = 0
+
+dtaLen[DVC_NME_INDEX]=20
+dtaLen[FORMAT_INDEX]=1
+dtaLen[UUID_INDEX]=16
+dtaLen[MAJOR_INDEX]=2
+dtaLen[MINOR_INDEX]=2
+dtaLen[TXPOWER_INDEX]=1     
+dtaLen[ADV_INTVL_INDEX]=1
+dtaLen[ADV_TMT_INDEX]=1
+dtaLen[CAL_VAL_INDEX]=1
+dtaLen[REM_CONN_TME_INDEX]=1
+
+
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//------------------------------------------------------------------------------
+'// For debugging
+'// --- rc = result code
+'// --- ln = line number         
+'//------------------------------------------------------------------------------
+Sub AssertRC(rc,ln)   
+    if rc!=0 then
+        print "\nFail :";integer.h' rc;" at tag ";ln
+    endif
+EndSub
+
+
+'//------------------------------------------------------------------------------
+'// Get index of the given handle in the 'charHndles[]' array
+'//------------------------------------------------------------------------------
+Function GetCharIndex(ByVal cHndl)
+   dim i
+    for i=0 to NUM_OF_CHARS-1 
+        if charHndles[i]==cHndl then
+            ExitFunc i                 //return the index of given handle 
+        endif
+    next    
+EndFunc -1                             //at this point, whole array has been searched.
+                                      //-1 indicates that handle was not found 
+
+'//------------------------------------------------------------------------------
+'// Validate TxPower characteristic value
+'//------------------------------------------------------------------------------
+Function ValidateTxPwr(tp$)
+    '//Array of valid tx power values
+    dim txp[9],tp  
+    txp[0]=4 : txp[1]=0 : txp[2]=-4 : txp[3]=-8 : txp[4]=-12: txp[5]=-16: txp[6]=-20: txp[7]=-30: txp[8]=-55
+    
+    '//Convert tx power to integer
+    rc=BleDecodeS8(tp$,tp,0)
+    
+    dim i
+    for i = 0 to 8
+        '//Take given TxPower and return the nearest valid TxPower value
+        if tp >=txp[i] then
+            ExitFunc txp[i]
+        endif
+    next
+Endfunc txp[8]   //just return minimum power
+
+
+'//------------------------------------------------------------------------------
+'// Swap the order of the 2 lower bytes of the argument
+'//------------------------------------------------------------------------------
+Function SwapBytes(v)
+Endfunc ((v>>8)&0xFF) + ((v<<8)&0xFF00)
+
+
+'//------------------------------------------------------------------------------
+'// Initialises dta$[] with default data (See Definitions)
+'//------------------------------------------------------------------------------
+Sub InitGattCharData()
+    dim i
+    '//Convert default values to string and place in array 'dta$[]'
+    dta$[DVC_NME_INDEX]=DEVICENAME
+    rc=BleEncode8(dta$[FORMAT_INDEX],BEACON_FORMAT,0)
+    AssertRC(rc,411)
+    dta$[UUID_INDEX]=BEACON_UUID               //already a string so no need to convert
+    rc=BleEncode16(dta$[MAJOR_INDEX],SwapBytes(BEACON_MAJOR),0)
+    AssertRC(rc,414)
+    rc=BleEncode16(dta$[MINOR_INDEX],SwapBytes(BEACON_MINOR),0)
+    AssertRC(rc,416)
+    rc=BleEncode8(dta$[TXPOWER_INDEX],BEACON_TXPOWER_DBM,0)
+    AssertRC(rc,418)
+    '//ensure advertising interval is NOT < the minimum
+    i = (ADV_INTERVAL_MS/ADV_INTERVAL_SCALER)
+    if i < (ADV_MIN_INTERVAL_MS/ADV_INTERVAL_SCALER) then
+        i = (ADV_MIN_INTERVAL_MS/ADV_INTERVAL_SCALER)
+    endif
+    rc=BleEncode8(dta$[ADV_INTVL_INDEX],i,0)
+    AssertRC(rc,425)
+    rc=BleEncode8(dta$[ADV_TMT_INDEX],ADV_TIMEOUT_MINUTES,0)
+    AssertRC(rc,427)
+    rc=BleEncode8(dta$[CAL_VAL_INDEX],CALIBRTD_VALUE_DBM,0)
+    AssertRC(rc,429)
+    rc=BleEncode8(dta$[REM_CONN_TME_INDEX],REMAIN_CONN_TME_SEC,0)
+    AssertRC(rc,431)
+EndSub
+
+
+'//------------------------------------------------------------------------------
+'// Load saved data from non volatile memory
+'//------------------------------------------------------------------------------
+Sub LoadSavedData()
+    dim i
+    for i=1 to NUM_OF_CHARS 
+        '//Load from selected record in memory into array 'dta$[]'
+        '//If nothing is read, the default value (see InitGattCharData()) is used
+        rc=NvRecordGetEx(i,dta$[i-1],dta$[i-1])
+    next     
+EndSub
+
+
+'//------------------------------------------------------------------------------
+'// Write new characteristic value attributes to non-volatile memory
+'//------------------------------------------------------------------------------
+Sub SaveNewData()
+    dim i
+    for i=1 to NUM_OF_CHARS
+        '//Write selected element in array 'dta$[]' to record in memory
+        rc=NvRecordSet(i,dta$[i-1])
+    next
+EndSub
+
+
+'//------------------------------------------------------------------------------
+'// Create manufacturer specific iBeacon AD element - param in BleAdvRptAppendAD
+'//------------------------------------------------------------------------------
+Function CreateIBeaconAD$()  
+    '//--- Format:                                              
+    '// 0 1  2  3  4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9  0 1  2 3  4
+    '// CompanyID
+    '//      DataType
+    '//         Length
+    '//            UUID
+    '//                                             0 1  2 3  4
+    '//                                             Major
+    '//                                                  Minor
+    '//                                                       TxPower
+    '// 4C00 02 15 E2C56DB5DFFB48D2B060D0F5A71096E0 0000 0000 C5
+    '// ---
+    dim mad$                                               //octet string for the AD (advertising record)
+    rc=BleEncode16(mad$,COMPANY_ID,0)                      //write company id to string 
+    AssertRC(rc,478)
+    rc=BleEncode8(mad$,BEACON_DATA_TYPE,2)                 //write data type to string
+    AssertRC(rc,480)
+
+    '//Convert Calibrated RSSI Value to integer
+    dim calVal : rc=BleDecodeS8(dta$[CAL_VAL_INDEX],calVal,0)
+    '//Convert Tx Power to integer
+    dim txPwr : rc=BleDecodeS8(dta$[TXPOWER_INDEX],txPwr,0)
+    
+    '//Calculate Measured RSSI (appears at end of the AD)
+    dim mesTxPwr : mesTxPwr = calVal - (4 - txPwr)
+    '//Write Measured RSSI to string
+    dim mesTxPwr$ : rc=BleEncode8(mesTxPwr$,mesTxPwr,0)
+    AssertRC(rc,491)
+    
+    '//Put together AD depending on selected format
+    dim len$                                              //number of bytes to follow in AD
+    dim bcnFrmt                                           //to select AD format
+    rc=BleDecodeU8(dta$[FORMAT_INDEX],bcnFrmt,0)              //convert format char value to integer  
+    
+    select bcnFrmt
+        case 1            
+            rc=BleEncode8(len$,0x14,0)                      //length = 20 bytes
+            AssertRC(rc,501)
+            '//UUID - Major - Minor]
+            mad$=mad$+len$+dta$[UUID_INDEX]+dta$[MAJOR_INDEX]+dta$[MINOR_INDEX]      
+        case 2
+            rc=BleEncode8(len$,0x10,0)                      //length = 16 bytes
+            AssertRC(rc,506)
+            '//UUID
+            mad$=mad$+len$+dta$[UUID_INDEX]
+        case else
+            rc=BleEncode8(len$,0x15,0)                      //length = 21 bytes
+            AssertRC(rc,511)
+            '//Full AD
+            mad$=mad$+len$+dta$[UUID_INDEX]+dta$[MAJOR_INDEX]+dta$[MINOR_INDEX]+mesTxPwr$  
+    endselect 
+EndFunc mad$
+
+'//------------------------------------------------------------------------------
+'// Create and Commit advert reports
+'//------------------------------------------------------------------------------
+Sub MakeAdvertRpts()
+    '//Initialise the Advert report (no appearance AD)
+    rc=BleAdvRptInit(advRpt$, DISCOVERY_MODE, 0, MAX_DEVNAME_CHRS_IN_ADVERT)
+    AssertRC(rc,523)
+    
+    '//create and append the apple iBeacon AD element 
+    dim adElmnt$ : adElmnt$=CreateIBeaconAD$()
+    rc=BleAdvRptAppendAD(advRpt$,0xFF,adElmnt$)
+    AssertRC(rc,528)
+    
+    '//Initialise the scan report
+    rc=BleScanRptInit(scnRpt$)
+    AssertRC(rc,532)
+
+    '//Add device name to scan report -- comment statement if you don't want
+    rc=BleAdvRptAppendAD(scnRpt$,0x09,dta$[DVC_NME_INDEX])
+    AssertRC(rc,536)
+
+    '//Commit the reports to stack
+    rc=BleAdvRptsCommit(advRpt$,scnRpt$)
+    AssertRC(rc,540)
+EndSub
+
+
+'//------------------------------------------------------------------------------
+'// Create and add a characteristic to the GATT table
+'//------------------------------------------------------------------------------
+Sub NewChar(ByRef hBsUuid, ByVal chrUuid,  ByVal index)
+    '//Create characteristic with 16bit uuid offset from Laird base uuid, r/w enabled   
+    rc=BleCharNew(0x0A, BleHandleUuidSibling(hBsUuid,(chrUuid)), BleAttrMetaData(1,1,dtaLen[index],1,rc),0,0)
+    AssertRC(rc,550)
+    '//Commit this new characteristic to the GATT table as part of iBeacon service
+    rc=BleCharCommit(hSvc,dta$[index],charHndles[index])  
+    AssertRC(rc,553)
+EndSub
+
+
+'//------------------------------------------------------------------------------
+'// Create and add a characteristic to the GATT table
+'//------------------------------------------------------------------------------
+Sub NewCharAdptd(ByVal chrUuid,  ByVal index)
+    '//Create characteristic with 16bit uuid offset from Bluetooth SIG base uuid, r/w enabled   
+    rc=BleCharNew(0x0A, BleHandleUuid16(chrUuid), BleAttrMetaData(1,1,dtaLen[index],1,rc),0,0)
+    AssertRC(rc,563)
+    '//Commit this new characteristic to the GATT table as part of iBeacon service
+    rc=BleCharCommit(hSvc,dta$[index],charHndles[index])   
+    AssertRC(rc,566)
+EndSub
+
+
+'//------------------------------------------------------------------------------
+'// Initialise service and characteristics
+'//------------------------------------------------------------------------------
+Sub CreateIBeaconSvc()
+    dim bseUuid$ : bseUuid$=LT_BASE_UUID             
+    '//Laird Technologies Base UUID Handle
+    dim hBseUuid : hBseUuid=BleHandleUuid128(bseUuid$)
+    '//iBeacon service UUID handle
+    dim hSvcUuid : hSvcUuid=BleHandleUuidSibling(hBseUuid,IBEACON_SVC_UUID)
+    
+    '//Commit the iBeacon service to GATT table
+    rc=BleSvcCommit(1,hSvcUuid,hSvc)
+    AssertRC(rc,582)
+    
+    '//Create and commit Characteristics   
+    NewChar(hBseUuid,0x2010,DVC_NME_INDEX)       //Device Name
+    //NewChar(hBseUuid,0x2011,FORMAT_INDEX)        //iBeacon Format
+    NewChar(hBseUuid,0x2012,UUID_INDEX)          //iBeacon UUID 
+    NewChar(hBseUuid,0x2013,MAJOR_INDEX)         //iBeacon Major  
+    NewChar(hBseUuid,0x2014,MINOR_INDEX)         //iBeacon Minor
+    NewCharAdptd(0x2A07,TXPOWER_INDEX)           //iBeacon Tx Power (Adopted) 
+    NewChar(hBseUuid,0x2015,ADV_INTVL_INDEX)      //Advertising Interval
+    NewChar(hBseUuid,0x2016,ADV_TMT_INDEX)        //Advertising Timeout  
+    NewChar(hBseUuid,0x2017,CAL_VAL_INDEX)        //Calibration Value 
+    NewChar(hBseUuid,0x2018,REM_CONN_TME_INDEX)   //Remain Connectable Time
+EndSub
+
+
+'//------------------------------------------------------------------------------
+'// Commit advert reports, start advertising
+'//------------------------------------------------------------------------------
+Sub StartAdvertising(ByVal advType)
+    '//Advertising parameters
+    dim tx,prAddr$,advIntvl,advTmt
+
+    '//update the gap service just in case a new name arrived
+    rc=BleGapSvcInit(dta$[DVC_NME_INDEX],0,APPEARANCE,MIN_CONN_INTERVAL,MAX_CONN_INTERVAL,CONN_SUP_TIMEOUT,SLAVE_LATENCY)
+    AssertRC(rc,607)
+    
+    '//Make and commit advert reports
+    MakeAdvertRpts()   
+    
+    '//Set tx power
+    rc=BleDecodeS8(dta$[TXPOWER_INDEX],tx,0) 
+    rc=BleTxPowerSet(tx)
+    AssertRC(rc,615)
+    
+    '//Convert advertising interval to integer
+    rc=BleDecodeU8(dta$[ADV_INTVL_INDEX],advIntvl,0)   
+    '//Convert to ms 
+    advIntvl=advIntvl*ADV_INTERVAL_SCALER
+
+    '//Set time out based on advert type
+    if advType==0 then
+        '//Convert remain connectible time to integer, use as time out
+        rc=BleDecodeU8(dta$[REM_CONN_TME_INDEX],advTmt,0)
+        '//Convert to ms
+        advTmt=advTmt*1000
+    else
+        '//Convert advertising time out to integer 
+        rc=BleDecodeU8(dta$[ADV_TMT_INDEX],advTmt,0)   
+        '//Convert to ms
+        advTmt=advTmt*60*1000
+    endif
+    
+    '//Start advertising
+    rc=BleAdvertStart(advType,prAddr$, advIntvl, advTmt,0)
+    AssertRC(rc,637)
+    
+EndSub 
+      
+        
+'//------------------------------------------------------------------------------
+'// This subroutine will be executed first
+'//------------------------------------------------------------------------------
+Sub OnStartup() 
+    '//Initialise dta$[] with default data in case there is nothing to read from memory
+    InitGattCharData()
+    '//Initialise dta$[] with data from nv memory
+    LoadSavedData()    
+    
+    '//Initialise the Gap Service 
+    rc=BleGapSvcInit(dta$[DVC_NME_INDEX],0,APPEARANCE,MIN_CONN_INTERVAL,MAX_CONN_INTERVAL,CONN_SUP_TIMEOUT,SLAVE_LATENCY)
+    AssertRC(rc,653)
+    
+    '//Initialise the Device Information service
+    rc=BleSvcRegDevInfo(MANF_NAME,MODELSTR,SERIALNUM,HWREV,APP_VERSION,"","","")
+   
+    '//Create and commit iBeacon service and characteristics
+    CreateIBeaconSvc()   
+    
+    '//Start advertising with type 0 = connectible
+    StartAdvertising(ADV_IND) 
+EndSub
+
+
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+'//------------------------------------------------------------------------------
+'// Error handler
+'//------------------------------------------------------------------------------
+Sub HndlrErr()
+    '//Reset the module
+    reset(0)
+EndSub
+    
+
+'//------------------------------------------------------------------------------
+'// Characteristic value attribute changed
+'//------------------------------------------------------------------------------
+Function HANDLERCHARVAL   //see the #define on line 20 or 21 in $autorun$.iBeacon.xxx.sb
+
+    dim i : i=GetCharIndex(charHndl)        //get array index of char handle 
+    dim s$                                  //temporary string to hold char value
+    dim l                                   //will hold length of string
+    
+    if i>-1 then
+        
+        '//read new value of selected char
+        rc=BleCharValueRead(charHndles[i],s$)
+        AssertRC(rc,693)
+        
+        '//get length of new char value that arrived
+        l = StrLen(s$)
+        
+        '//Update GAP service is device name char was written
+        if i==DVC_NME_INDEX then
+            if (l >= MIN_DEVICENAME_LEN) && (l <= MAX_DEVICENAME_LEN) then
+                dta$[i]=s$
+                '//a characteristic was written to
+                newCfg = 1
+            else
+                '//Overwrite char with previous value
+                rc=BleCharValueWrite(charHndles[i],dta$[i])
+                AssertRC(rc,707)
+            endif
+        else
+            select i
+                '//Validate char length - this will be executed every time
+                if l==dtaLen[i] then
+                    '//Write new char value to data array 'dta$'
+                    dta$[i]=s$
+                    '//a characteristic was written to
+                    newCfg = 1
+                else
+                    '//Overwrite char with previous value
+                    rc=BleCharValueWrite(charHndles[i],dta$[i])
+                    AssertRC(rc,720)
+                    break   //don't need to do any of the below if char value is overwritten
+                endif
+                
+                '//Validate if tx power, convert result back to string
+                case TXPOWER_INDEX
+                    rc=BleEncode8(s$,ValidateTxPwr(s$),0)
+                    AssertRC(rc,727)
+                    '//Overwrite char value in case it was changed
+                    rc=BleCharValueWrite(charHndles[i],s$)
+                    AssertRC(rc,730)
+                    
+                '//Validate if remain connectible time  
+                case REM_CONN_TME_INDEX
+                    dim remConn       
+                    '//Convert remain connectible char value to integer
+                    rc=BleDecodeU8(s$,remConn,0)
+                    '//Validate
+                    if remConn<REMAIN_CONN_TME_SEC_MIN then
+                        '//Overwrite char with default
+                        rc=BleEncode8(dta$[i],REMAIN_CONN_TME_SEC_MIN,0)
+                        AssertRC(rc,741)
+                        rc=BleCharValueWrite(charHndles[i],dta$[i])
+                        AssertRC(rc,743)
+                    endif
+                    
+                '//Validate if advertising interval
+                case ADV_INTVL_INDEX
+                    dim advIntvl
+                    rc=BleDecodeU8(dta$[ADV_INTVL_INDEX],advIntvl,0) 
+                    if advIntvl<(ADV_MIN_INTERVAL_MS/ADV_INTERVAL_SCALER) then
+                        '//value too low, so override with minimum allowed
+                        advIntvl = (ADV_MIN_INTERVAL_MS/ADV_INTERVAL_SCALER)
+                        rc=BleEncode8(dta$[ADV_INTVL_INDEX],(ADV_INTERVAL_MS/ADV_INTERVAL_SCALER),0)
+                        AssertRC(rc,754)
+                        rc=BleCharValueWrite(charHndles[i],dta$[i])
+                        AssertRC(rc,756)
+                    endif
+                case else
+            endselect                     
+        endif
+    endif
+EndFunc 1
+
+
+'//------------------------------------------------------------------------------
+'// Ble Message
+'//------------------------------------------------------------------------------
+Function HndlrBleMsg(ByVal msgID, ByVal hConn)   
+    if msgID==BLE_DISCONNECTED then    
+        //if new data arrived then save it
+        if newCfg != 0 then
+           '//only write to flash if we have to
+           SaveNewData()
+        endif        
+        '//Start a type 0 advertisement
+        StartAdvertising(ADV_IND)        
+    endif
+EndFunc 1   
+
+
+'//------------------------------------------------------------------------------
+'// Advert Timeout handler
+'//------------------------------------------------------------------------------
+Function HndlrBleAdvTmt()  
+    '//Start a type 2 advertisement
+    StartAdvertising(ADV_SCAN_IND)
+EndFunc 1 
+
+
+
+'//******************************************************************************
+'// Equivalent to main() in C
+'//******************************************************************************
+OnEvent EvBleMsg           call HndlrBleMsg
+OnEvent EvBle_Adv_Timeout  call HndlrBleAdvTmt
+                   '//*******************************************************
+                   '// If you get a TOK_INCOMPATIBLE_ROUTINE at the statement
+                   '// below, then locate the two lines at the top of this
+                   '// file which start with #define HANDLERCHARVAL where
+                   '// one will be commented out. In that case, uncomment
+                   '// one and then comment out the other.
+                   '//
+                   '// This was a change introduced in firmware v1.3.57.21
+                   '//*******************************************************
+OnEvent EvCharVal  call HndlrCharVal
+
+OnError next HndlrErr
+ 
+OnStartup()
+
+'//------------------------------------------------------------------------------
+'// Wait for a synchronous event.
+'// An application can have multiple <WaitEvent> statements
+'//------------------------------------------------------------------------------
+WaitEvent

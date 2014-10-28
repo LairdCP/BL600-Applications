@@ -1,0 +1,279 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// ######                                                                #######
+'// ######        Library File meant to be #included in files             #######
+'// ######                                                                #######
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// This library contains contains Health Thermomter Service and should be
+'// #included in your app.
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+#define MAX_HTM_LEN         13
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim shHts as integer        '//Service handle
+dim chHtsMeas as integer    '//Health Temperature Measurement Characteristic Handle
+
+dim indState                '//indication state 0 = off, 1 = on
+dim indwait                 '//0 means not waiting for an indication confirm
+dim tempMant                '//Temperature mantissa
+dim tempExp                 '//Termperature exponant
+dim fUnits                  '//Units -- 0 = Centigrade, 1 = Fahrenheit
+dim dateTime$ as string     '//Date Time string -- must be 0 or 7 bytes long
+dim hts$ as string          '//hts measurement attribute
+dim tmpType                 '//sensor location/type
+
+'//******************************************************************************
+'// Initialisse Global Variable
+'//******************************************************************************
+indwait         = 0
+indState        = 0
+
+tempMant        = 0
+tempExp         = 0
+
+fUnits          = 0
+dateTime$       = ""
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//==============================================================================
+'// data to encode is in tempMant,tempExp,fUnits,dateTime$,tmpType
+'//==============================================================================
+sub HtsEncode()
+  dim rc
+  dim encsz
+  dim flgs
+  dim ndx
+
+  //Initialise the flags byte
+  flgs  = 0x04  //The temperature type is always included
+  encsz = 6  //flag(1) + float(4) + tempType(1)
+
+  //Update centigrade or fahrenhiet
+  if fUnits then
+    //Units in fahrenheit
+    flgs  = flgs | 0x01
+  endif
+  //update if datetime present
+  if strlen(dateTime$) then
+    flgs  = flgs | 0x02
+    encsz = encsz + 7  //encoded datetime is 7 bytes long
+  endif
+
+  //create the attribute buffer space
+  rc= StrFill(hts$,0,encsz)
+  //Save the flags field
+  rc = BleEncode8(hts$,flgs,0)
+  //save the health temperature info
+  rc = BleEncodeFloat(hts$,tempMant,tempExp,1)
+  ndx = 5
+  //Save time stamp if present
+  if encsz > 6 then
+    rc = BleEncodeTimeStamp(hts$,dateTime$,ndx)
+    ndx = ndx+7
+  endif
+  //save the temperature type
+  rc = BleEncode8(hts$,tmpType,ndx)
+
+endsub
+
+'//==============================================================================
+'//==============================================================================
+function AddCharHtsMeas() as integer
+  dim rc
+
+  //----------------------------------------------------------------------------
+  // Create the Health Temperature Measurement Characteristic which has a UUID of 0x2A1C
+  //----------------------------------------------------------------------------
+  dim mdAttr
+  dim mdCccd
+  dim mdSccd
+  dim chProp
+  dim wrCccd
+  //dim attr$
+
+  //++++
+  //Create the metadata for the value attribute in the characteristic
+  // Heart Rate attribute has variable length
+  //++++
+  mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_NONE,BLE_ATTR_ACCESS_NONE,MAX_HTM_LEN,0,rc)
+  AssertResCode(rc,9200)
+  //There is a CCCD in this characteristic
+  if REQUIRE_BONDING == 1 then
+    wrCccd = BLE_ATTR_ACCESS_ENC_NO_MITM
+  else
+    wrCccd = BLE_ATTR_ACCESS_OPEN
+  endif
+  mdCccd=BleAttrMetadata(BLE_ATTR_ACCESS_OPEN,wrCccd,2,0,rc)
+  AssertResCode(rc,9202)
+  //There is no SCCD in this characteristic
+  mdSccd = BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  //AssertResCode(rc,9204)
+  //Create the Characteristic object
+  chProp = BLE_CHAR_PROPERTIES_INDICATE
+  rc = BleCharNew(chProp,BleHandleUuid16(0x2A1C),mdAttr,mdCccd,mdSccd)
+  AssertResCode(rc,9206)
+
+  //++++
+  //Add the USER_DESCRIPTION Descriptor
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9220)
+  //attr$="user_desc"
+  //rc = BleCharDescUserDesc(attr$,mdAttr)
+  //AssertResCode(rc,9230)
+
+  //++++
+  //Add the PRESENTATION FORMAT Descriptor
+  //++++
+  //rc = BleCharDescPrstnFrmt(format,exponent,unit,namespace,namespacedesc)
+  //AssertResCode(rc,9240)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- first one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9250)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9260)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- second one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9251)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9261)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- nth one
+  //++++
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- last one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,925x)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,926x)
+
+  //++++
+  //Commit the characteristic
+  //++++
+  HtsEncode()
+  rc = BleCharCommit(shHts,hts$,chHtsMeas)
+  AssertResCode(rc,9300)
+
+endfunc rc
+
+
+'//==============================================================================
+'//==============================================================================
+function RegHtsService()
+  dim rc
+
+  //----------------------------------------------------------------------------
+  //Create a Health Thermometer PRIMARY service attribure which has a uuid of 0x1809
+  //----------------------------------------------------------------------------
+  rc = BleSvcCommit(BLE_SERVICE_PRIMARY,BleHandleUuid16(0x1809),shHts)
+  AssertResCode(rc,9100)
+
+  //----------------------------------------------------------------------------
+  // Create the HTS Measurement Characteristic which has a UUID of 0x2A1C
+  //----------------------------------------------------------------------------
+  rc = AddCharHtsMeas()
+  AssertResCode(rc,9110)
+
+endfunc rc
+
+'//==============================================================================
+'// snsloc is an integer as follows:-
+'//   1   Armpit
+'//   2   Body (General)
+'//   3   Ear (usually ear lobe)
+'//   4   Finger
+'//   5   Gastro intestinal tract
+'//   6   Mouth
+'//   7   Rectum
+'//   8   Toe
+'//   9   Tympanum (Ear Drum)
+'//==============================================================================
+sub InitHtsService(byval snsloc as integer)
+  dim rc
+
+  tmpType = snsloc
+
+  rc = RegHtsService()
+  AssertResCode(rc,2080)
+  if rc==0 then
+     AddUuid(UUID_HEALTH_THERMOMETER_SERVICE)
+  endif
+
+endsub
+
+'//==============================================================================
+'// will return 0 if successfully sent
+'//==============================================================================
+function SendThermData() as integer
+  dim rc
+  rc = 1
+  if indwait == 0 then
+    HtsEncode()
+//print "\nhts_attr=";strhexize$(hts$);"\n"
+    rc = BleCharValueIndicate(chHtsMeas,hts$)
+    AssertResCode(rc,2100)
+    if rc == 0 then
+      indwait = 1
+    endif
+  endif
+endfunc rc
+
+
+'//==============================================================================
+'// MUST be called from the CHARHVC message handler
+'//==============================================================================
+sub HtsOnCharHvc()
+  indwait = 0
+endsub
+
+
+'//==============================================================================
+'// MUST be called from the CHARCCCD message handler
+'//==============================================================================
+sub HtsOnCharCccd(BYVAL nVal AS INTEGER)
+  indState = nVal
+endsub
+
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+
+'//******************************************************************************
+'// Other initialisations
+'//******************************************************************************
+
+
+

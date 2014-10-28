@@ -1,0 +1,192 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// ######                                                                #######
+'// ######        Library File meant to be #included in files             #######
+'// ######                                                                #######
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// This library contains contains the immediate alert service manager and should be
+'// #included in your app
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim shIas as integer
+dim chIasAltlvl as integer
+
+dim ias$
+
+'//******************************************************************************
+'// Initialise Global Variable
+'//******************************************************************************
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//==============================================================================
+'//==============================================================================
+function AddIasCharAlertLevel() as integer
+  dim rc
+
+  //----------------------------------------------------------------------------
+  // Create the Immediate Level Characteristic which has a UUID of 0x2A06
+  //----------------------------------------------------------------------------
+  dim mdAttr
+  dim mdCccd
+  dim mdSccd
+  dim chProp
+  dim wrCccd
+
+  //++++
+  //Create the metadata for the value attribure in the characteristic
+  //++++
+  if REQUIRE_BONDING == 1 then
+    wrCccd = BLE_ATTR_ACCESS_ENC_NO_MITM
+  else
+    wrCccd = BLE_ATTR_ACCESS_OPEN
+  endif
+  mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_NONE,wrCccd,1,0,rc)
+  AssertResCode(rc,9200)
+  //There is no CCCD in this characteristic
+  mdCccd = BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  //There is no SCCD in this characteristic
+  mdSccd = BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  //Create the Characteristic object
+  chProp = BLE_CHAR_PROPERTIES_WRITE_WO_RESPONSE
+  rc = BleCharNew(chProp,BleHandleUuid16(0x2A06),mdAttr,mdCccd,mdSccd)
+  AssertResCode(rc,9211)
+
+  //++++
+  //Add the USER_DESCRIPTION Descriptor
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9220)
+  //attr$="user_desc"
+  //rc = BleCharDescUserDesc(attr$,mdAttr)
+  //AssertResCode(rc,9230)
+
+  //++++
+  //Add the PRESENTATION FORMAT Descriptor
+  //++++
+  //rc = BleCharDescPrstnFrmt(format,exponent,unit,namespace,namespacedesc)
+  //AssertResCode(rc,9240)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- first one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9250)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9260)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- second one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9251)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9261)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- nth one
+  //++++
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- last one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,925x)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,926x)
+
+  //++++
+  //Commit the characteristic
+  //++++
+  ias$="\00"
+  //rc = BleEncode8(attr$,0,0)
+  rc = BleCharCommit(shIas,ias$,chIasAltlvl)
+  AssertResCode(rc,9300)
+
+endfunc rc
+
+
+'//==============================================================================
+'//==============================================================================
+function RegIasService() as integer
+  dim rc
+
+  //----------------------------------------------------------------------------
+  //Create a battery PRIMARY service attribure which has a uuid of 0x1802
+  //----------------------------------------------------------------------------
+  rc = BleSvcCommit(BLE_SERVICE_PRIMARY,BleHandleUuid16(0x1802),shIas)
+  AssertResCode(rc,9100)
+
+  //----------------------------------------------------------------------------
+  // Create the Battery Level Characteristic which has a UUID of 0x2A06
+  //----------------------------------------------------------------------------
+  rc = AddIasCharAlertLevel()
+  AssertResCode(rc,9110)
+
+endfunc rc
+
+
+'//==============================================================================
+'//==============================================================================
+function IasGetAlrtVal() as integer
+  dim lvl
+  dim rc
+  dim len
+
+  rc = BleCharValueRead(chIasAltlvl,ias$)
+  AssertResCode(rc,9510)
+  if rc == 0 then
+    len = BleDecodeU8(ias$,lvl,0)
+  else
+    lvl = 0
+  endif
+
+endfunc lvl
+
+
+'//==============================================================================
+'//==============================================================================
+sub InitImmAlertService()
+  dim rc
+
+  rc = RegIasService()
+  AssertResCode(rc,2630)
+  if rc==0 then
+     AddUuid(UUID_IMMEDIATE_ALERT_SERVICE)
+  endif
+
+endsub
+
+
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Other initialisations
+'//******************************************************************************
+
+
+

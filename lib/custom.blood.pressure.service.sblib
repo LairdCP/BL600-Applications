@@ -1,0 +1,376 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// ######                                                                #######
+'// ######        Library File meant to be #included in files             #######
+'// ######                                                                #######
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// This library contains contains Blood Pressure Service manager and should be
+'// #included in your app.
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+#define MAX_BPM_LEN         20
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim shBps as integer        '//Service handle
+dim chBpsMeas as integer    '//Blood Pressure Measurement Characteristic Handle
+dim chBpsFtr as integer     '//Blood Pressure Feature Characteristic Handle
+
+dim indState                '//indication state 0 = off, 1 = on
+dim indwait                 '//0 means not waiting for an indication confirm
+dim dateTime$ as string     '//Date Time string -- must be 0 or 7 bytes long
+
+dim sysPressure             '//Systolic pressure
+dim diasPressure            '//Diastolic pressure
+dim meanPressure            '//Mean Arterial Pressure
+dim nMeasStatus             '//Measurement Status see BLE_BPS_MEAS_STAT_xxx
+dim nPulseRate              '//Pulse Rate - beats per minute
+dim bpFeature               '//bp feature characteristic value 0..0xFFFF
+dim nUserId                 '//bp user id 0..255
+dim units                   '//0 for mmHg and 1 for Pascal
+
+dim bps$ as string          '//blood pressure measurement attribute
+
+'//******************************************************************************
+'// Initialisse Global Variable
+'//******************************************************************************
+
+sysPressure     = 0
+diasPressure    = 0
+meanPressure    = 0
+nPulseRate      = 0
+nMeasStatus     = 0
+dateTime$       = ""
+nUserId         = 254     //don't care
+bpFeature       = BLE_BPS_FEATURE_BODY_MOVEMENT_BIT + BLE_BPS_FEATURE_MEASUREMENT_POSITION_BIT
+units           = 0  //mmHg
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//==============================================================================
+'// data to encode is in sysPressure,diasPressure,meanPressure,nPulseRate,
+'//                      nMeasStatus,dateTime$,nUserId,units
+'//==============================================================================
+sub BpsEncode()
+  dim rc
+  dim encsz
+  dim flgs
+  dim ndx
+
+  //Initialise the flags byte
+  encsz = 12      //Flag(1) + Systolic(2) + Diastolic(2) + MeanArtPress(2) + Pulse(2)
+                  // + userid(1) + measStat(2)
+  flgs  = b'11100 //The Pulse,Userid,MeasStat is always included
+
+  //Update mmHg or Pascal bit in Flags
+  if units then
+    //Units in Pascal
+    flgs  = flgs | b'1
+  endif
+
+  //update if datetime present
+  if strlen(dateTime$) then
+    flgs  = flgs | b'10
+    encsz = encsz + 7  //encoded datetime is 7 bytes long
+  endif
+
+  //create the attribute buffer space
+  rc= StrFill(bps$,0,encsz)
+  //Save the flags field
+  rc = BleEncode8(bps$,flgs,0)
+  //Save the Systolic Pressure
+  rc = BleEncodeSFLOATEX(bps$,sysPressure,1)
+  //Save the Diastolic Pressure
+  rc = BleEncodeSFLOATEX(bps$,diasPressure,3)
+  //Save the Mean Arterial Pressure
+  rc = BleEncodeSFLOATEX(bps$,meanPressure,5)
+  ndx = 7
+  //Save the date time stamp if exists
+  if flgs & b'10 then
+    rc = BleEncodeTimeStamp(bps$,dateTime$,ndx)
+    ndx = ndx+7
+  endif
+  //Save the pulse rate
+  rc = BleEncodeSFLOATEX(bps$,nPulseRate,ndx)
+  ndx = ndx+2
+  //Save User Id
+  rc = BleEncode8(bps$,nUserId,ndx)
+  ndx = ndx+1
+  //Save the measurement status
+  rc = BleEncode16(bps$,nMeasStatus,ndx)
+
+endsub
+
+'//==============================================================================
+'//==============================================================================
+function AddCharBpsMeas() as integer
+  dim rc
+
+  //----------------------------------------------------------------------------
+  // Create the Blood Pressure Measurement Characteristic which has a UUID of 0x2A35
+  //----------------------------------------------------------------------------
+  dim mdAttr
+  dim mdCccd
+  dim mdSccd
+  dim chProp
+  //dim attr$
+
+  //++++
+  //Create the metadata for the value attribute in the characteristic
+  // Heart Rate attribute has variable length
+  //++++
+  mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_NONE,BLE_ATTR_ACCESS_NONE,MAX_BPM_LEN,1,rc)
+  AssertResCode(rc,9200)
+  //There is a CCCD in this characteristic
+  mdCccd=BleAttrMetadata(BLE_ATTR_ACCESS_OPEN,BLE_ATTR_ACCESS_ENC_NO_MITM,2,0,rc)
+  AssertResCode(rc,9202)
+  //There is no SCCD in this characteristic
+  mdSccd = BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  //AssertResCode(rc,9204)
+  //Create the Characteristic object
+  chProp = BLE_CHAR_PROPERTIES_INDICATE
+  rc = BleCharNew(chProp,BleHandleUuid16(0x2A35),mdAttr,mdCccd,mdSccd)
+  AssertResCode(rc,9206)
+
+  //++++
+  //Add the USER_DESCRIPTION Descriptor
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9220)
+  //attr$="user_desc"
+  //rc = BleCharDescUserDesc(attr$,mdAttr)
+  //AssertResCode(rc,9230)
+
+  //++++
+  //Add the PRESENTATION FORMAT Descriptor
+  //++++
+  //rc = BleCharDescPrstnFrmt(format,exponent,unit,namespace,namespacedesc)
+  //AssertResCode(rc,9240)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- first one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9250)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9260)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- second one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9251)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9261)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- nth one
+  //++++
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- last one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,925x)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,926x)
+
+  //++++
+  //Commit the characteristic
+  //++++
+  BpsEncode()
+  rc = BleCharCommit(shBps,bps$,chBpsMeas)
+  AssertResCode(rc,9380)
+
+endfunc rc
+
+'//==============================================================================
+'//==============================================================================
+function AddCharBpsFeature() as integer
+  dim rc
+
+  //----------------------------------------------------------------------------
+  // Create the Blood Pressure Feature Characteristic which has a UUID of 0x2A49
+  //----------------------------------------------------------------------------
+  dim mdAttr
+  dim mdCccd
+  dim mdSccd
+  dim chProp
+  dim attr$
+
+  //++++
+  //Create the metadata for the value attribute in the characteristic
+  // Heart Rate attribute has variable length
+  //++++
+  mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_OPEN,BLE_ATTR_ACCESS_NONE,2,0,rc)
+  AssertResCode(rc,9400)
+  //There is no CCCD in this characteristic
+  mdCccd=BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  //AssertResCode(rc,9402)
+  //There is no SCCD in this characteristic
+  mdSccd = BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  //AssertResCode(rc,9404)
+  //Create the Characteristic object
+  chProp = BLE_CHAR_PROPERTIES_READ
+  rc = BleCharNew(chProp,BleHandleUuid16(0x2A49),mdAttr,mdCccd,mdSccd)
+  AssertResCode(rc,9406)
+
+  //++++
+  //Add the USER_DESCRIPTION Descriptor
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9420)
+  //attr$="user_desc"
+  //rc = BleCharDescUserDesc(attr$,mdAttr)
+  //AssertResCode(rc,9430)
+
+  //++++
+  //Add the PRESENTATION FORMAT Descriptor
+  //++++
+  //rc = BleCharDescPrstnFrmt(format,exponent,unit,namespace,namespacedesc)
+  //AssertResCode(rc,9440)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- first one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9450)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9460)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- second one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9451)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9461)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- nth one
+  //++++
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- last one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,945x)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,946x)
+
+  //++++
+  //Commit the characteristic
+  //++++
+  attr$="\00\00"
+  rc = BleEncode16(attr$,bpFeature,0)
+  rc = BleCharCommit(shBps,attr$,chBpsFtr)
+  AssertResCode(rc,9480)
+
+endfunc rc
+
+'//==============================================================================
+'//==============================================================================
+function RegBpsService() as integer
+  dim rc
+
+  //----------------------------------------------------------------------------
+  //Create a Health Thermometer PRIMARY service attribure which has a uuid of 0x1810
+  //----------------------------------------------------------------------------
+  rc = BleSvcCommit(BLE_SERVICE_PRIMARY,BleHandleUuid16(0x1810),shBps)
+  AssertResCode(rc,9100)
+
+  //----------------------------------------------------------------------------
+  // Create the Blood Pressure Measurement Characteristic which has a UUID of 0x2A35
+  //----------------------------------------------------------------------------
+  rc = AddCharBpsMeas()
+  AssertResCode(rc,9110)
+
+  //----------------------------------------------------------------------------
+  // Create the Blood Pressure Feature Characteristic which has a UUID of 0x2A49
+  //----------------------------------------------------------------------------
+  rc = AddCharBpsFeature()
+  AssertResCode(rc,9120)
+
+endfunc rc
+
+'//==============================================================================
+'//==============================================================================
+sub InitBpsService()
+  dim rc
+  rc = RegBpsService()
+  AssertResCode(rc,2080)
+  if rc==0 then
+     AddUuid(UUID_BLOOD_PRESSURE_SERVICE)
+  endif
+
+endsub
+
+
+'//==============================================================================
+'// will return 0 if successfully sent
+'//==============================================================================
+function SendBpData() as integer
+  dim rc
+  rc = 1
+  if indwait == 0 then
+    BpsEncode()
+//print "\nbps_attr=";strhexize$(bps$);"\n"
+    rc = BleCharValueIndicate(chBpsMeas,bps$)
+    AssertResCode(rc,2107)
+    if rc == 0 then
+      indwait = 1
+    endif
+  endif
+endfunc rc
+
+
+'//==============================================================================
+'// MUST be called from the CHARHVC message handler
+'//==============================================================================
+sub BpsOnCharHvc()
+  indwait = 0
+endsub
+
+
+'//==============================================================================
+'// MUST be called from the CHARCCCD message handler
+'//==============================================================================
+sub BpsOnCharCccd(BYVAL nVal AS INTEGER)
+  indState = nVal
+endsub
+
+
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+
+'//******************************************************************************
+'// Other initialisations
+'//******************************************************************************
+
+
+

@@ -1,0 +1,135 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// ######                                                                #######
+'// ######        Library File meant to be #included in files             #######
+'// ######                                                                #######
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// This library contains contains the advert & scan report manager and should be
+'// #included in your app
+'//
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim adRpt$ as string        '//contains the most recent Advertise report
+dim scRpt$ as string        '//contains the most recent scan report
+dim advUuid[6]              '//These are the uuid's that are exposed
+dim advUuidCnt              '//Uuid Counts for advert report
+
+'//******************************************************************************
+'// Initialise Global Variable
+'//******************************************************************************
+
+adRpt$=""
+scRpt$=""
+
+'//Initialise the uuid array list with -1 which will be taken as item not to
+'//to be included in the advert report for the uuid AD element.
+for advUuidCnt=0 to 5
+  advUuid[advUuidCnt]=-1
+next
+advUuidCnt = 0
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//==============================================================================
+'// Will add to array if there is space
+'//==============================================================================
+sub AddUuid(nUuid as integer)
+  if advUuidCnt < 5 then
+    advUuid[advUuidCnt]=nUuid
+    advUuidCnt = advUuidCnt + 1
+  endif
+endsub
+
+'//==============================================================================
+'// advFlags = Flags for Advert Report
+'//==============================================================================
+sub InitAdvReports(advFlags as integer)
+  dim rc
+
+  adRpt$=""
+  scRpt$=""
+
+  '//If whitelist filter policy is enabled and there is at least one master
+  '//in the bonding manager, then need to reset the advFlags so that
+  '//discoverability is disabled
+  if advFilPol != ADV_FILTERPOLICY_ANY then
+    '//Filter policy has been enabled
+    if sysinfo(2009) != 0 then
+      '//There is at least one master in the trusted device database
+      advFlags = advFlags & 0xFFFFFFFC
+    endif
+  endif
+
+  '//create a minimal advertise report
+  rc = BleAdvRptInit(adRpt$,advFlags,ADV_APPEARANCE,MAX_DEVNAME_CHRS)
+  AssertResCode(rc,2030)
+
+  '//Append the uuid list to the advert report
+  rc = BleAdvRptAddUuid16(adRpt$,advUuid[0],advUuid[1],advUuid[2],advUuid[3],advUuid[4],advUuid[5])
+  AssertResCode(rc,2040)
+
+  '//Initialise an empty scan report
+  rc = BleScanRptInit(scRpt$)
+  AssertResCode(rc,2045)
+
+  '//commit the advert and scan report to the scan
+  rc = BleAdvRptsCommit(adRpt$,scRpt$)
+  AssertResCode(rc,2050)
+
+endsub
+
+'//==============================================================================
+'//==============================================================================
+function ScanReportInit()
+  dim rc
+  rc = BleScanRptInit(scRpt$)
+  AssertResCode(rc,2060)
+endfunc rc
+
+'//==============================================================================
+'//==============================================================================
+function ScanReportAppend(nTag as integer, byref adData$ as string)
+  dim rc
+  rc = BleAdvRptAppendAD(scRpt$,nTag,adData$)
+  AssertResCode(rc,2070)
+endfunc rc
+
+'//==============================================================================
+'//==============================================================================
+function ScanReportCommit()
+  dim rc,rpt$
+  rpt$=""
+  rc = BleAdvRptsCommit(rpt$,scRpt$)
+  AssertResCode(rc,2080)
+endfunc rc
+
+
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Other initialisations
+'//******************************************************************************
+
+
+

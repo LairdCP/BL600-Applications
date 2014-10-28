@@ -1,0 +1,193 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// ######                                                                #######
+'// ######        Library File meant to be #included in files             #######
+'// ######                                                                #######
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// This library contains contains the battery service manager and should be
+'// #included in your app
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim shBat as integer
+dim chBatlvl as integer
+dim batlvl$ as string
+
+'//******************************************************************************
+'// Initialise Global Variable
+'//******************************************************************************
+
+shBat = 0
+chBatlvl = 0
+batlvl$ ="\64"
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//==============================================================================
+'//==============================================================================
+function AddCharBatLevel(byval btlvl as integer, byval fNfy as integer) as integer
+  dim rc
+
+  if btLvl < 0 then
+    btLvl = 0
+  elseif btLvl > 100 then
+    btLvl = 100
+  endif
+
+  //----------------------------------------------------------------------------
+  // Create the Battery Level Characteristic which has a UUID of 0x2A19
+  //----------------------------------------------------------------------------
+  dim mdAttr
+  dim mdCccd
+  dim mdSccd
+  dim chProp
+  //dim attr$
+
+  //++++
+  //Create the metadata for the value attribure in the characteristic
+  //++++
+  mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_OPEN,BLE_ATTR_ACCESS_NONE,1,0,rc)
+  AssertResCode(rc,9200)
+  //There is no CCCD in this characteristic
+  mdCccd = BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  //There is no SCCD in this characteristic
+  mdSccd = BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  //Create the Characteristic object
+  chProp = BLE_CHAR_PROPERTIES_READ
+  rc = BleCharNew(chProp,BleHandleUuid16(0x2A19),mdAttr,mdCccd,mdSccd)
+  AssertResCode(rc,9210)
+
+  //++++
+  //Add the USER_DESCRIPTION Descriptor
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9220)
+  //attr$="user_desc"
+  //rc = BleCharDescUserDesc(attr$,mdAttr)
+  //AssertResCode(rc,9230)
+
+  //++++
+  //Add the PRESENTATION FORMAT Descriptor
+  //++++
+  //rc = BleCharDescPrstnFrmt(format,exponent,unit,namespace,namespacedesc)
+  //AssertResCode(rc,9240)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- first one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9250)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9260)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- second one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9251)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9261)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- nth one
+  //++++
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- last one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,925x)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,926x)
+
+  //++++
+  //Commit the characteristic
+  //++++
+  rc = BleEncode8(batlvl$,btlvl,0)
+  rc = BleCharCommit(shBat,batlvl$,chBatlvl)
+  AssertResCode(rc,9300)
+
+endfunc rc
+
+
+'//==============================================================================
+'//==============================================================================
+function RegBatService(byval btlvl as integer, byval fNfy as integer) as integer
+  dim rc
+
+  //----------------------------------------------------------------------------
+  //Create a battery PRIMARY service attribure which has a uuid of 0x180F
+  //----------------------------------------------------------------------------
+  rc = BleSvcCommit(BLE_SERVICE_PRIMARY,BleHandleUuid16(0x180F),shBat)
+  AssertResCode(rc,9100)
+
+  //----------------------------------------------------------------------------
+  // Create the Battery Level Characteristic which has a UUID of 0x2A19
+  //----------------------------------------------------------------------------
+  rc = AddCharBatLevel(btlvl,fNfy)
+  AssertResCode(rc,9110)
+
+endfunc rc
+
+
+'//==============================================================================
+'//==============================================================================
+sub InitBatService(byval batlvl as integer, byval fNfy as integer)
+  dim rc
+
+  rc = RegBatService(batlvl,fNfy)
+  if rc==0 then
+     AddUuid(UUID_BATTERY_SERVICE)
+  endif
+
+endsub
+
+'//==============================================================================
+'//==============================================================================
+function SetBattLevel(btLvl as integer) as integer
+  dim rc
+
+  if btLvl < 0 then
+    btLvl = 0
+  elseif btLvl > 100 then
+    btLvl = 100
+  endif
+
+  rc = BleEncode8(batlvl$,btlvl,0)
+  rc = BleCharValueWrite(chBatlvl,batlvl$)
+  AssertResCode(rc,9500)
+
+endfunc rc
+
+
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Other initialisations
+'//******************************************************************************
+
+
+

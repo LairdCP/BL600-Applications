@@ -1,0 +1,173 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// ######                                                                #######
+'// ######        Library File meant to be #included in files             #######
+'// ######                                                                #######
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// This library contains contains the TX Power service manager and should be
+'// #included in your app
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim shTps as integer
+dim chTxpChar as integer
+
+dim txPwr           '//tx power
+
+'//******************************************************************************
+'// Initialise Global Variable
+'//******************************************************************************
+
+txPwr = TX_POWER_LEVEL
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+
+'//==============================================================================
+'//==============================================================================
+function AddCharTxPower() as integer
+  dim rc
+
+  //----------------------------------------------------------------------------
+  // Create the Immediate Level Characteristic which has a UUID of 0x2A07
+  //----------------------------------------------------------------------------
+  dim mdAttr
+  dim mdCccd
+  dim mdSccd
+  dim chProp
+  dim attr$
+
+  //++++
+  //Create the metadata for the value attribure in the characteristic
+  //++++
+  mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_ENC_NO_MITM,BLE_ATTR_ACCESS_NONE,1,0,rc)
+  AssertResCode(rc,9200)
+  //There is no CCCD in this characteristic
+  mdCccd = BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  //There is no SCCD in this characteristic
+  mdSccd = BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  //Create the Characteristic object
+  chProp = BLE_CHAR_PROPERTIES_READ
+  rc = BleCharNew(chProp,BleHandleUuid16(0x2A07),mdAttr,mdCccd,mdSccd)
+  AssertResCode(rc,9213)
+
+  //++++
+  //Add the USER_DESCRIPTION Descriptor
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9220)
+  //attr$="user_desc"
+  //rc = BleCharDescUserDesc(attr$,mdAttr)
+  //AssertResCode(rc,9230)
+
+  //++++
+  //Add the PRESENTATION FORMAT Descriptor
+  //++++
+  //rc = BleCharDescPrstnFrmt(format,exponent,unit,namespace,namespacedesc)
+  //AssertResCode(rc,9240)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- first one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9250)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9260)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- second one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,9251)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,9261)
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- nth one
+  //++++
+
+  //++++
+  //Add the other Descriptor 0x29XX  -- last one
+  //++++
+  //mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_XXXX,BLE_ATTR_ACCESS_XXXX,MAXLEN,isVARLEN,rc)
+  //AssertResCode(rc,925x)
+  //attr$="some_value"
+  //rc = BleCharDescAdd(0x29XX,attr$,mdAttr)
+  //AssertResCode(rc,926x)
+
+  //++++
+  //Commit the characteristic
+  //++++
+  attr$="\00"
+  rc = BleEncode8(attr$,txPwr,0)
+  rc = BleCharCommit(shTps,attr$,chTxpChar)
+  AssertResCode(rc,9300)
+endfunc rc
+
+
+'//==============================================================================
+'//==============================================================================
+function RegTpsService() as integer
+  dim rc
+
+  //----------------------------------------------------------------------------
+  //Create a battery PRIMARY service attribure which has a uuid of 0x1804
+  //----------------------------------------------------------------------------
+  rc = BleSvcCommit(BLE_SERVICE_PRIMARY,BleHandleUuid16(0x1804),shTps)
+  AssertResCode(rc,9100)
+
+  //----------------------------------------------------------------------------
+  // Create the Tx Power  Characteristic which has a UUID of 0x2A07
+  //----------------------------------------------------------------------------
+  rc = AddCharTxPower()
+  AssertResCode(rc,9110)
+
+endfunc rc
+
+
+'//==============================================================================
+'//==============================================================================
+sub InitTxPowerService()
+  dim rc
+
+  rc = BleTxPowerSet(txPwr)
+  AssertResCode(rc,2650)
+
+  rc = RegTpsService()
+  AssertResCode(rc,2660)
+  if rc==0 then
+     AddUuid(UUID_TX_POWER_SERVICE)
+  endif
+
+endsub
+
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Other initialisations
+'//******************************************************************************
+
+
+

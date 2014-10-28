@@ -1,0 +1,675 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+'// +++++  which consists of all characters up to the first . and excluding it ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// Virtual Serial Port Profile  -- showing usage of EVVSPPTXEMPTY event
+'//
+'//   ####################################
+'//   #                                  #
+'//   #  Search for TODO to make changes #
+'//   #                                  #
+'//   ####################################
+'//
+'//
+'//   When you run the app you will get a > command prompt to allow you to submit
+'//   commands as follows:-
+'//
+'//     initapp           - initialise/start the app
+'//
+'//     vso               - VSPP Open with 144 byte rx buffer & 112 byte tx buffer
+'//     vw aaaa           - VSPP write
+'//     vr nnn            - VSPP read up to nnn bytes from rx buffer
+'//     vi nnn            - VSPP info
+'//     vsc               - VSPP close
+'//     vsx               - clear the local vspp read variable
+'//     vst               - Add the VSPP uuid to the scan report
+'//     ve nn             - Put nn bytes into transmit buffer and send
+'//
+'//     fg n              - set advertising discoverability mode - n is 0 to 3 (see BLE_DISCOVERABILITY_xxx )
+'//     ai nnnn           - set advertising interval in milliseconds
+'//     at nnnn           - set advertising timeout in milliseconds
+'//     af n              - set advertising filter policy 0..3 (see ADV_FILTERPOLICY_xx)
+'//     scinit            - Initiliase the scan report to empty
+'//     sd ttaa..aa       - set scan AD tag && data -- MUST be a hex string
+'//     scadd             - append the AD element from sd command to scan report
+'//     sccmt             - Commit the scan report to the stack for reports
+'//     ma nnnnn..nnn     - set mac address - 12 hex digits
+'//     ad n              - if n=0 then stop adverts otherwise start adverts if
+'//                            n=1 then ADV_IND
+'//                            n=2 then ADV_DIRECT_IND
+'//                            n=3 then ADV_SCAN_IND
+'//                            n=4 then ADV_NONCONN_IND
+'//
+'//     discon            - disconnect
+'//     stop              - exit app to command mode and can resume using RESUME command
+'//     quit              - quit app to command mode
+'//     in nnnn           - set min conn interval (us)
+'//     ix nnnn           - set max conn interval (us)
+'//     st nnnn           - set supervision timeout (us)
+'//     sl nnnn           - set slave latency
+'//     negp              - negotiate connection parameters
+'//
+'//     io n              - if n=0 then BLE_IOCAPABILITY_NONE
+'//                            n=1 then BLE_IOCAPABILITY_DISPLAY_YESNO
+'//                            n=2 then BLE_IOCAPABILITY_KEYBOARD_ONLY
+'//                            n=3 then BLE_IOCAPABILITY_DISPLAY_ONLY
+'//                            n=4 then BLE_IOCAPABILITY_KEYBOARD_DISPLAY
+'//     ky nnnn           - set pairing passcode (decimal)
+'//     kn nn             - minimum size of ltk
+'//     kx nn             - maximum size of ltk
+'//     setkey            - commit min and max ltk key size
+'//
+'//     db nn             - display debug info associated with nn
+'//
+'//     dr aaaaaa         - GAP - set device name with read only
+'//     dw aaaaaa         - GAP - set device name with read/write capability only
+'//
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Register Error Handler as early as possible
+'//******************************************************************************
+sub HandlerOnErr()
+  if (ENABLE_DEBUG_PRINTS!=0) then
+    print "\n OnErr - ";GetLastError();"\n"
+  endif
+endsub
+onerror next HandlerOnErr
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+#include "lib\debugging.routines.sblib"
+#include "lib\ble.sblib"
+#include "lib\standard.advert.mngr.sblib"
+#include "lib\advert.report.manager.sblib"
+#include "lib\connection.manager.sblib"
+#include "lib\security.manager.sblib"
+#include "lib\gap.service.sblib"
+#include "lib\device.information.service.sblib"
+
+'//******************************************************************************
+'// Debugging resource after libs
+'//******************************************************************************
+
+'//==============================================================================
+'//==============================================================================
+sub DbgInfo(id as integer)
+  select id
+  case 0
+    DbgPrnAdvReport(adRpt$)
+  case 1
+    DbgPrnAdvReport(scRpt$)
+
+  case else
+  endselect
+endsub
+
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim stRsp$ as string        '//Uart rx data is stored here
+dim ok$,er$
+dim msg$
+dim mnltk                   '//min size of ltk
+dim mxltk                   '//max size of ltk
+dim advFlags                '//value for flags AD
+dim adTag                   '//AD Tag
+dim adDta$                  '//AD Data
+
+dim tsz                     '//txbuf size for vspp
+dim rsz                     '//rxbuf size for vspp
+dim flgs                    '//flags for vspp
+dim uuhdl                   '//Service uuid handle for VSPP
+dim rx$                     '//vspp read data stored here
+
+'//******************************************************************************
+'// Initialisse Global Variable
+'//******************************************************************************
+
+ok$      = "\nOK\r\n>"
+er$      = "\nERROR\r\n>"
+
+mnltk    = MIN_LTK_SIZE
+mxltk    = MAX_LTK_SIZE
+advFlags = DISCOVERY_MODE    '//can be changed via 'fg' command
+
+adTag    = 0
+adDta$   = ""
+
+tsz      = 112
+rsz      = 144
+flgs     = 1
+uuhdl    = 0
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//==============================================================================
+'//==============================================================================
+sub UartRsp(rsp as integer)
+  dim rc
+  if rsp == 0 then
+    rc = UartWrite(ok$)
+  else
+    rc = UartWrite(er$)
+  endif
+endsub
+
+'//==============================================================================
+'//==============================================================================
+sub UartMsg(byref msg$ as string)
+  dim rc
+  rc = UartWrite(msg$)
+endsub
+
+
+'//==============================================================================
+'//==============================================================================
+function StartAds(adv as integer) as integer
+  dim rc
+  rc=StartAdverts(adv)
+  if rc==0 then
+    DbgMsgVal("Start Adverts",adv)
+  endif
+endfunc rc
+
+'//==============================================================================
+'//==============================================================================
+function StopAds() as integer
+  dim rc
+  rc=StopAdverts()
+  if rc==0 then
+    DbgMsg("Stop Adverts")
+  endif
+endfunc rc
+
+'//==============================================================================
+'//==============================================================================
+sub SetDeviceName(st$ as string,wr as integer)
+  dim rc
+  rc = BleGapSvcInit(st$,wr,APPEARANCE,MIN_CONN_INTERVAL,MAX_CONN_INTERVAL,CONN_SUP_TIMEOUT,SLAVE_LATENCY)
+  AssertResCode(rc,2020)
+  InitAdvReports(advFlags)
+endsub
+
+'//==============================================================================
+'//==============================================================================
+function SaveMacAddr(byref ad$ as string) as integer
+  dim vl
+  vl=strlen(ad$)
+  if vl==7 then
+    addr$ = ad$
+    exitfunc 0
+  endif
+endfunc 1
+
+'//==============================================================================
+'//==============================================================================
+function ProcAdvCmd(vl as integer) as integer
+  dim rc
+  if vl==0 then
+    rc= StopAds()
+  else
+    vl=vl-1
+    rc= StartAds(vl)
+  endif
+endfunc rc
+
+'//==============================================================================
+'//==============================================================================
+sub ShowConnParms(nCtx as integer)
+  dim rc
+  dim intrvl,sprvto,slat
+  rc= BleGetCurConnParms(nCtx,intrvl,sprvto,slat)
+  AssertResCode(rc,1240)
+  if rc==0 then
+    DbgMsgVal("Conn Interval",intrvl)
+    DbgMsgVal("Conn Supervision Timeout",sprvto)
+    DbgMsgVal("Conn Slave Latency",slat)
+  endif
+endsub
+
+
+'//==============================================================================
+'//==============================================================================
+function ProcScanData(st$ as string)
+  dim rc
+  rc = 1
+  if strlen(st$) >= 1 then
+    adTag  = StrGetChr(st$,0)
+    adDta$ = mid$(st$,1,65535)
+    rc=0
+  endif
+endfunc rc
+
+
+'//==============================================================================
+'//==============================================================================
+function VSppOpen()
+  dim rc
+  rc = BleVSpOpen(tsz,rsz,flgs,uuhdl)
+  AssertResCode(rc,7400)
+  if rc==0 then
+    print "\nBleVSppOpen() OK"
+  endif
+endfunc rc
+
+'//==============================================================================
+'//==============================================================================
+function VSppClose()
+  BleVSpClose()
+  print "\nBleVSppClose() OK"
+endfunc 0
+
+'//==============================================================================
+'//==============================================================================
+function VSppInfo(itype)
+  print "\nBleVSppInfo(";itype;") returned ";BleVSpInfo(iType)
+endfunc 0
+
+'//==============================================================================
+'//==============================================================================
+function VSppWrite(x$)
+  dim n
+  n = BleVSpWrite(x$)
+  print "\nBleVSppWrite(x$) returned ";n;" and len of x$ was ";strlen(x$)
+endfunc 0
+
+'//==============================================================================
+'//==============================================================================
+function VSppWriteEx(ln)
+  dim n,r,x$
+  r=strfill(x$,0,ln)
+  if r==0 then
+    ln= ln-1
+    for n=0 to ln
+      r = 0x41 + (n%57)   //'A' + offset
+      r = strsetchr(x$,r,n)
+    next
+    r = BleVSpWrite(x$)
+    print "\nBleVSppWrite(x$) returned ";r;" and len of x$ was ";strlen(x$)
+  else
+    exitfunc r
+  endif
+endfunc 0
+
+'//==============================================================================
+'//==============================================================================
+function VSppRead(ilen)
+  dim n
+  n = BleVSpRead(rx$,ilen)
+  print "\nBleVSppRead(,";ilen;") returned ";n;" and datalen ";strlen(rx$)
+  print "\nData=";rx$
+endfunc 0
+
+'//==============================================================================
+'//==============================================================================
+function VSppAdvert()
+  dim rc,rpt$
+  rc = BleAdvRptAddUuid128(scRpt$,uuhdl)
+  AssertResCode(rc,7410)
+  if rc == 0 then
+    rpt$=""
+    rc = BleAdvRptsCommit(rpt$,scRpt$)
+    AssertResCode(rc,7420)
+  endif
+  if rc == 0 then
+    print "\nVSPP added 128 uuid to scanrpt"
+  endif
+endfunc rc
+
+
+'//==============================================================================
+'// This is called to start things off just before the waitevent at the end of
+'// the file
+'//==============================================================================
+sub OnStartup()
+  dim rc
+
+  InitSecurityMngr(PAIRING_IOCAPABILITY,MIN_LTK_SIZE, MAX_LTK_SIZE)
+
+  // Initialise services
+  InitGapService()
+  InitDisService()
+
+  // Initiliase advert and scan reports
+  InitAdvReports(advFlags)
+
+  // Initialise VSP service
+  //rc = VSppOpen()
+  //AssertResCode(rc,7982)
+
+  // add the VSP service to the scan report
+  //rc = VSppAdvert()
+  //AssertResCode(rc,7981)
+
+endsub
+
+
+'//==============================================================================
+'// Expecting to see XX=nnn\n\r  where nnn =1 to 2 digit decimal number
+'//==============================================================================
+function OnUartCmd(stData$,datalen) as integer
+  dim stRS$,vl$
+  dim vl,rc
+
+  rc=0  '//assume OK response
+
+  if datalen >= 4 then
+
+    '//drop the terminating CR
+    datalen = datalen - 1
+    stData$ = left$(stData$,datalen)
+    //extract the command
+    stRS$ = strsplitleft$(stData$,3)
+    '//************ Advertisement related commands ******************************
+
+    if strcmp(stRS$,"ad ")==0 then
+      rc = ProcAdvCmd(strvaldec(stData$))
+
+    elseif strcmp(stRS$,"ma ")==0 then
+      vl$ = strdehexize$(stData$)
+      rc=SaveMacAddr(vl$)
+
+    elseif  strcmp(stRS$,"ai ")==0 then  // advertising interval in milliseconds
+      if SetAdvertInt(strvaldec(stData$)) == 0 then
+        rc = 1
+      endif
+
+    elseif  strcmp(stRS$,"at ")==0 then  // advertising timeout in milliseconds
+      if SetAdvertTout(strvaldec(stData$)) == 0 then
+        rc = 1
+      endif
+
+    elseif  strcmp(stRS$,"af ")==0 then  // advertising filter policy
+      if SetAdvertFPol(strvaldec(stData$)) == 0 then
+        rc = 1
+      endif
+
+    elseif strcmp(stRS$,"fg ")==0 then   //Flags AD value (0..3) see BLE_DISCOVERABILITY_xxx
+      advFlags = strvaldec(stData$)
+
+    elseif strcmp(stRS$,"sci")==0 then   //scinit - Initiliase the scan report to empty
+      rc=ScanReportInit()
+
+    elseif strcmp(stRS$,"scc")==0 then   //sccmt  - Commit the scan report to the stack for reports
+      rc=ScanReportCommit()
+
+    elseif strcmp(stRS$,"sd ")==0 then   //sd ttaa..aa - set scan AD tag && data -- MUST be a hex string
+      vl$ = strdehexize$(stData$)
+      rc = ProcScanData(vl$)
+
+    elseif strcmp(stRS$,"sca")==0 then   //scadd  - append the AD element from sd command to scan report
+      rc = ScanReportAppend(adTag,adDta$)
+
+
+    '//************ Profile related commands ************************
+
+    elseif strcmp(stRS$,"vso")==0 then   //vo   - VSPP Open with 144 byte rx buffer & 112 byte tx buffer
+      rc=VSppOpen()
+
+    elseif strcmp(stRS$,"vsc")==0 then   //vc   - VSPP close
+      rc=VSppClose()
+
+    elseif strcmp(stRS$,"vi ")==0 then   //vi nnn            - VSPP info for nnn
+      rc=VSppInfo(strvaldec(stData$))
+
+    elseif strcmp(stRS$,"vw ")==0 then   //vw aaaa           - VSPP write
+      rc=VSppWrite(stData$)
+
+    elseif strcmp(stRS$,"ve ")==0 then   //ve nn     - VSPP store nn bytes and then write
+      rc=VSppWriteEx(strvaldec(stData$))
+
+    elseif strcmp(stRS$,"vr ")==0 then   //vr nnn            - VSPP read up to nnn bytes from rx buffer
+      rc=VSppRead(strvaldec(stData$))
+
+    elseif strcmp(stRS$,"vsx")==0 then   //clear the local vspp read variable
+      rx$=""
+      rc=0
+
+    elseif strcmp(stRS$,"vst")==0 then   //vt    - Add the VSPP uuid to the scan report
+      rc=VSppAdvert()
+
+
+    '//************ GAP service related commands ****************************
+
+    elseif strcmp(stRS$,"dr ")==0 then
+      SetDeviceName(stData$,0)
+
+    elseif strcmp(stRS$,"dw ")==0 then
+      SetDeviceName(stData$,1)
+
+    '//************ Pairing related commands ************************************
+
+    elseif strcmp(stRS$,"ky ")==0 then
+      vl = strvaldec(stData$)
+      DbgMsgVal( "Passkey : ",vl )
+      rc = SecSendPassKey(hConn,vl)
+
+    elseif strcmp(stRS$,"io ")==0 then
+      rc = SecSetIoCap(strvaldec(stData$))
+
+    elseif strcmp(stRS$,"kn ")==0 then
+      mnltk = strvaldec(stData$)
+
+    elseif strcmp(stRS$,"kx ")==0 then
+      mxltk = strvaldec(stData$)
+
+    elseif strcmp(stRS$,"set")==0 then     //setkey
+      rc = SecSetLtkSizeRange(mnltk,mxltk)
+
+    '//************ connection related commands ************************************
+
+    elseif  strcmp(stRS$,"in ")==0 then  // minimum interval (us) for conn parameters
+      minint = strvaldec(stData$)
+
+    elseif  strcmp(stRS$,"ix ")==0 then  // maximum interval (us) for conn parameters
+      maxint = strvaldec(stData$)
+
+    elseif  strcmp(stRS$,"st ")==0 then  // supervision teimout (us) for conn parameters
+      sprtout = strvaldec(stData$)
+
+    elseif  strcmp(stRS$,"sl ")==0 then  // slave latency for conn parameters
+      slatncy = strvaldec(stData$)
+
+    elseif strcmp(stRS$,"neg")==0 then
+      rc = ConnNewParms(hConn)
+
+    elseif strcmp(stRS$,"dis")==0 then  //disconnect
+      rc = Disconnect(hConn)
+
+    '//************ Misc & Debug related commands *******************************
+
+    elseif strcmp(stRS$,"db ")==0 then
+      DbgInfo(strvaldec(stData$))
+
+    elseif strcmp(stRS$,"sto")==0 then
+      stop
+
+    elseif strcmp(stRS$,"qui")==0 then
+      reset(0)
+      exitfunc 0
+
+    elseif ((AUTO_STARTUP & 1) == 0) && strcmp(stRS$,"ini")==0 then     //initapp
+      OnStartup()
+      DbgMsg( "OnStartup() called" )
+
+    '//**************************************************************************
+    else
+      rc = 1
+    endif
+
+  else
+    rc = 1
+
+  endif
+
+  '// send a response back to the user
+  UartRsp(rc)
+
+endfunc 1
+
+
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+'//==============================================================================
+'// This handler is called when there is a BLE message
+'//==============================================================================
+function HandlerBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER) as integer
+
+  '// Inform libraries
+  ConnMngrOnBleMsg(nMsgId,nCtx)
+  AdvMngrOnBleMsg(nMsgId,nCtx)
+
+  select nMsgId
+  case BLE_EVBLEMSGID_CONNECT
+    DbgMsgVal(" --- Connect : ",nCtx)
+    ShowConnParms(nCtx)
+
+  case BLE_EVBLEMSGID_DISCONNECT
+    DbgMsgVal(" --- Disconnect : ",nCtx)
+
+  case BLE_EVBLEMSGID_IMMEDIATE_ALERT_SERVICE_ALERT
+    DbgMsgVal( "\n --- Immediate Alert Service Alert ", nCtx)
+    DbgMsg("\n")
+
+  case BLE_EVBLEMSGID_DISPLAY_PASSKEY
+    DbgMsgVal("Display Pairing Passkey ",nCtx)
+
+  case BLE_EVBLEMSGID_NEW_BOND
+    DbgMsg(" +++ New Bond")
+
+  case BLE_EVBLEMSGID_UPDATED_BOND
+    DbgMsg(" +++ Updated Bond")
+
+  case BLE_EVBLEMSGID_ENCRYPTED
+    DbgMsg(" +++ Encrypted Connection")
+
+  case BLE_EVBLEMSGID_CONN_TO_BONDED_MASTER
+    DbgMsgVal(" -- Conn to Bonded Master ",nCtx)
+
+  case BLE_EVBLEMSGID_AUTH_KEY_REQUEST
+    DbgMsgVal(" +++ Auth Key Request, type=",nCtx)
+
+  case BLE_EVBLEMSGID_CONN_PARMS_UPDATE
+    ShowConnParms(nCtx)
+
+  case BLE_EVBLEMSGID_CONN_PARMS_UPDATE_FAIL
+    DbgMsg(" ??? Conn Parm Negotiation FAILED")
+
+  case else
+    DbgMsgVal("Unknown Ble Msg", nMsgId)
+  endselect
+endfunc 1
+
+'//==============================================================================
+'// This handler is called when data has arrived at the serial port
+'//==============================================================================
+function HandlerUartRx() as integer
+  dim nMatch
+  dim stData$
+
+  nMatch=UartReadMatch(stRsp$,13)
+  if nMatch!=0 then
+    stData$ = strsplitleft$(stRsp$,nMatch)
+    exitfunc OnUartCmd(stData$,nMatch)
+  endif
+endfunc 1
+
+'//==============================================================================
+'// This handler is called when data has arrived at the virtual serial port
+'//==============================================================================
+function HandlerVsppRx() as integer
+  print "\nEVVSPPRX Event : Byte in RxBuf =";BleVSpInfo(3)
+endfunc 1
+
+'//==============================================================================
+'// This handler is called when the vspp buffer is empty
+'//==============================================================================
+function HandlerVSppTxEmpty() as integer
+  print "\nEVVSPPTXEMPTY Event"
+endfunc 1
+
+'//==============================================================================
+'// This handler is called when the vspp buffer is empty
+'//==============================================================================
+function HandlerNotifyBuf() as integer
+  print "\nEVNOTIFYBUF Event"
+endfunc 1
+
+'//==============================================================================
+'// This handler is called when data has arrived at the serial port
+'//==============================================================================
+function HandlerBlrAdvTimOut() as integer
+
+  if AdvMngrOnAdvTimeOut() == 0 then
+
+    DbgMsg( "\nAdvert stopped via timeout" )
+    '//DbgMsg( "\n   - could use SystemStateSet(0) to switch off" )
+
+    '//------------------------------------------------------------
+    '//  Switch off the system - requires a power cycle to recover
+    '//------------------------------------------------------------
+    '//  rc = SystemStateSet(0)
+    '//  AssertResCode(rc,1199)
+  endif
+
+endfunc 1
+
+'//******************************************************************************
+'// Equivalent to main() in C
+'//******************************************************************************
+
+'//------------------------------------------------------------------------------
+'// Enable synchronous event handlers
+'//------------------------------------------------------------------------------
+OnEvent  EVUARTRX           call HandlerUartRx
+OnEvent  EVBLE_ADV_TIMEOUT  call HandlerBlrAdvTimOut
+OnEvent  EVBLEMSG           call HandlerBleMsg
+OnEvent  EVVSPRX            call HandlerVSppRx
+OnEvent  EVVSPTXEMPTY       call HandlerVSppTxEmpty
+OnEvent  EVNOTIFYBUF        call HandlerNotifyBuf
+
+'//------------------------------------------------------------------------------
+'// Initialise Services and then wait for events
+'//------------------------------------------------------------------------------
+if (AUTO_STARTUP & 1) != 0 then
+  //Create Advert packets and register services
+  OnStartup()
+endif
+if (AUTO_STARTUP & 2) != 0 then
+  //Start advertising
+  dim rc
+  rc=StartAds(ADV_IND)
+endif
+
+
+'//Send user prompt for uart based command interface
+msg$="\n\r"
+UartMsg(msg$)
+msg$=DEVICENAME
+UartMsg(msg$)
+msg$="\n\r"
+UartMsg(msg$)
+
+'//Send an OK response
+UartRsp(0)
+

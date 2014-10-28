@@ -1,0 +1,116 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+'// +++++  which consists of all characters up to the first . and excluding it ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'//
+'// Simple development board button and LED test
+'// Tests the functionality of button 0, button 1, LED 0 and LED 1 on the development board
+'// DVK-BL600-V01
+'//
+'// 24/01/2013 Initial version
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+'//#include "$.lib.ble.sb"
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim rc                          '// declare rc as integer variable
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+'//==============================================================================
+'//==============================================================================
+sub AssertResCode(byval rc as integer,byval tag as integer)
+  if (rc!=0) then
+    print "Failed with ";integer.h' rc;" at tag ";tag;"\n"
+  endif
+endsub
+
+'//==============================================================================
+'//==============================================================================
+function button0release()               '//this function is called when the button 0 is released"
+gpiowrite(18,0)                     '// turns LED 0 off
+print "Button 0 has been released \n"           '//these lines are printed to the UART when the button is released
+print "LED 0 should now go out \n\n"
+endfunc 1
+
+'//==============================================================================
+'//==============================================================================
+function button0press()                 '//this function is called when the button 0 is pressed"
+gpiowrite(18,1)                     '// turns LED 0 on
+print "Button 0 has been pressed \n"            '//these lines are printed to the UART when the button is pressed
+print "LED 0 will light while the button is pressed \n"
+endfunc 1
+
+'//==============================================================================
+'//==============================================================================
+function button1release()               '//this function is called when the button 1 is released"
+gpiowrite(19,0)                     '//turns LED 1 off
+print "Button 1 has been released \n"           '//these lines are printed to the UART when the button is released
+print "LED 1 should now go out \n\n"
+endfunc 1
+
+'//==============================================================================
+'//==============================================================================
+function button1press()                 '//this function is called when the button 1 is pressed"
+gpiowrite(19,1)                     '// turns LED 1 on
+print "Button 1 has been pressed \n"            '//these lines are printed to the UART when the button is pressed
+print "LED 1 will light while the button is pressed \n"
+endfunc 1
+
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+'//******************************************************************************
+'// Equivalent to main() in C
+'//******************************************************************************
+
+rc = gpiosetfunc(16,1,2)                '//sets sio16 (Button 0) as a digital in with a weak pull up resistor
+AssertResCode(rc,1000)
+rc = gpiosetfunc(17,1,2)                '//sets sio17 (Button 1) as a digital in with a weak pull up resistor
+AssertResCode(rc,1010)
+rc = gpiosetfunc(18,2,0)                '//sets sio18 (LED0) as a digital out
+AssertResCode(rc,1020)
+rc = gpiosetfunc(19,2,0)                '//sets sio19 (LED1) as a digital out
+AssertResCode(rc,1030)
+rc = gpiobindevent(0,16,0)              '//binds a gpio transition high to an event. sio16 (button 0)
+AssertResCode(rc,1040)
+rc = gpiobindevent(1,16,1)              '//binds a gpio transition low to an event. sio16 (button 0)
+AssertResCode(rc,1050)
+rc = gpiobindevent(2,17,0)              '//binds a gpio transition high to an event. sio17 (button 1)
+AssertResCode(rc,1060)
+rc = gpiobindevent(3,17,1)              '//binds a gpio transition low to an event. sio17 (button 1)
+AssertResCode(rc,1070)
+
+onevent evgpiochan0 call button0release         '//detects when button 0 is released and calls the function
+onevent evgpiochan1 call button0press           '//detects when button 0 is pressed and calls the function
+onevent evgpiochan2 call button1release         '//detects when button 1 is released and calls the function
+onevent evgpiochan3 call button1press           '//detects when button 1 is pressed and calls the function
+
+print "Ready to begin button and LED test \n"        '//these lines are printed to the UART when the program is run
+print "Please press button 0 or button 1 \n\n"
+
+'//------------------------------------------------------------------------------
+'// Wait for a synchronous event.
+'// An application can have multiple <WaitEvent> statements
+'//------------------------------------------------------------------------------
+waitevent                       '//when program is run it waits here until an event is detected

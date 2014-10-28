@@ -1,0 +1,93 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+'// +++++  which consists of all characters up to the first . and excluding it ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// Simple program that reads the development board trim pot value and
+'// prints it to the UART
+'//
+'// 25/01/2013
+'//
+'//******************************************************************************
+
+
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// Close the uart to reduce current consumption
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+'//define how often to read the adc value in milliseconds
+#define pollrate 1000
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim rc      '//result code
+Dim adc
+Dim mv
+
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+'//==============================================================================
+'//==============================================================================
+sub pollgpio()                  '//this subroutine sets up the GPIO and starts the main timer
+rc=GpioSetFunc(5,1,2)               '//remover the pull resistor
+rc=GpioSetFunc(5,3,0)               '//set as SIO 5 as analog in
+TimerStart(0,pollrate,1)            '//starts a repeating timer using the value defined by poll rate
+endsub
+
+'//==============================================================================
+'//==============================================================================
+sub printvalues()               '//this subroutine prints the ADC values every time the timer rolls over
+print "adc value is ";adc;"\n"
+print "Trim Pot millivolt value is ";mv;"\n"
+print "\n"
+endsub
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+'//==============================================================================
+'//==============================================================================
+function HandlerTimer0()            '//this is what happens everytime the timer rolls over
+adc=GpioRead(5)                 '//get the adc value from SIO 5
+mv=(adc*225)/128                '//convert the adc value into millivolts
+printvalues()                   '//call the subroutine that prints the values
+endfunc 1
+
+
+
+'//******************************************************************************
+'// Equivalent to main() in C
+'//******************************************************************************
+
+OnEvent  EVTMR0             call HandlerTimer0  '//wait for timer to roll over and  then do everthing in handlertimer0
+
+pollgpio()                  '//this is what kicks it all off by calling the pollgpio subroutine
+
+'//------------------------------------------------------------------------------
+'// Wait for a synchronous event.
+'// An application can have multiple <WaitEvent> statements
+'//------------------------------------------------------------------------------
+waitevent
+
