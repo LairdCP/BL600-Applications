@@ -136,9 +136,9 @@ function RegBatService(byval btlvl as integer, byval fNfy as integer) as integer
   dim rc
 
   //----------------------------------------------------------------------------
-  //Create a battery PRIMARY service attribure which has a uuid of 0x180F
+  //Create a battery PRIMARY service attribute which has a uuid of 0x180F
   //----------------------------------------------------------------------------
-  rc = BleSvcCommit(BLE_SERVICE_PRIMARY,BleHandleUuid16(0x180F),shBat)
+  rc = BleServiceNew(BLE_SERVICE_PRIMARY,BleHandleUuid16(0x180F),shBat)
   AssertResCode(rc,9100)
 
   //----------------------------------------------------------------------------
@@ -146,6 +146,12 @@ function RegBatService(byval btlvl as integer, byval fNfy as integer) as integer
   //----------------------------------------------------------------------------
   rc = AddCharBatLevel(btlvl,fNfy)
   AssertResCode(rc,9110)
+  
+  //----------------------------------------------------------------------------
+  //Commit battery service to GATT table
+  //----------------------------------------------------------------------------
+  rc=BleServiceCommit(shBat)
+   AssertResCode(rc,9120)
 
 endfunc rc
 

@@ -71,6 +71,16 @@
         '//Advertise time out (0==forever)
 #define ADV_TIMEOUT_MINUTES                  0
 
+        '//How often to update the battery level (minutes)
+#define BATT_LEVEL_POLL_MIN                  10
+
+        '//Threshold Voltage in mv at which GetBattLevel() will return a battery level of 100%
+#define BATT_100_PERC_THRESH_MV              3000
+
+        '//Threshold Voltage in mv at which GetBattLevel() will return a battery level of 0%
+#define BATT_0_PERC_THRESH_MV                1800
+
+
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // The following information is for the GAP service  (UUID = 0x1800)
 // Feel free to modify to suite your need
@@ -90,5 +100,6 @@
 '//******************************************************************************
 '// Library Import
 '//******************************************************************************
-#include "$autorun$.iBeacon.sblib"
+#include "lib\iBeacon.sblib"
+
 

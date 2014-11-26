@@ -17,6 +17,12 @@
 '//   ###################################################################################
 '//   #                                                                                 #
 '//   #  -----------------------------------------------------------------------------  #
+'//   #  ::Changelog:: 15/10/14 -> 2.2.0                                                #
+'//   #  -----------------------------------------------------------------------------  # 
+'//   #  - Added battery service. Battery level is by default updated every 10 minutes  #
+'//   #    -> See #define on line 75 of $autorun$.iBeacon.sb                            #
+'//   #                                                                                 # 
+'//   #  -----------------------------------------------------------------------------  #
 '//   #  ::Changelog:: 06/12/13 -> 2.1.0                                                #
 '//   #  -----------------------------------------------------------------------------  # 
 '//   #  - Refactored so that it is split in two files                                  #
@@ -271,10 +277,6 @@
 #define MAX_DEVNAME_CHRS_IN_ADVERT            0
         '//DiscoverableMode (2==General)
 #define DISCOVERY_MODE                       2
-        '//Advert Type 0 - Invites connection requests
-#define ADV_IND                             0        
-        '//Advert Type 2 - Invites scan request for more advert data
-#define ADV_SCAN_IND                         2
 
         '// Minimum acceptable connection interval (0.5 seconds)
 #define MIN_CONN_INTERVAL                    100000
@@ -301,6 +303,27 @@
 
         '//Ble is connected error
 #define BLE_IS_CONNECTED                     0x604C
+
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+#include "lib\ble.sblib"
+
+
+'//------------------------------------------------------------------------------
+'// For debugging
+'// --- rc = result code
+'// --- ln = line number         
+'//------------------------------------------------------------------------------
+Sub AssertResCode(rc,ln)   
+    if rc!=0 then
+        print "\nFail :";integer.h' rc;" at tag ";ln
+    endif
+EndSub
+
+
+
 
 '//******************************************************************************
 '// Global Variable Declarations
@@ -348,16 +371,7 @@ dtaLen[REM_CONN_TME_INDEX]=1
 '// Function and Subroutine definitions
 '//******************************************************************************
 
-'//------------------------------------------------------------------------------
-'// For debugging
-'// --- rc = result code
-'// --- ln = line number         
-'//------------------------------------------------------------------------------
-Sub AssertRC(rc,ln)   
-    if rc!=0 then
-        print "\nFail :";integer.h' rc;" at tag ";ln
-    endif
-EndSub
+
 
 
 '//------------------------------------------------------------------------------
@@ -409,27 +423,27 @@ Sub InitGattCharData()
     '//Convert default values to string and place in array 'dta$[]'
     dta$[DVC_NME_INDEX]=DEVICENAME
     rc=BleEncode8(dta$[FORMAT_INDEX],BEACON_FORMAT,0)
-    AssertRC(rc,411)
+    AssertResCode(rc,411)
     dta$[UUID_INDEX]=BEACON_UUID               //already a string so no need to convert
     rc=BleEncode16(dta$[MAJOR_INDEX],SwapBytes(BEACON_MAJOR),0)
-    AssertRC(rc,414)
+    AssertResCode(rc,414)
     rc=BleEncode16(dta$[MINOR_INDEX],SwapBytes(BEACON_MINOR),0)
-    AssertRC(rc,416)
+    AssertResCode(rc,416)
     rc=BleEncode8(dta$[TXPOWER_INDEX],BEACON_TXPOWER_DBM,0)
-    AssertRC(rc,418)
+    AssertResCode(rc,418)
     '//ensure advertising interval is NOT < the minimum
     i = (ADV_INTERVAL_MS/ADV_INTERVAL_SCALER)
     if i < (ADV_MIN_INTERVAL_MS/ADV_INTERVAL_SCALER) then
         i = (ADV_MIN_INTERVAL_MS/ADV_INTERVAL_SCALER)
     endif
     rc=BleEncode8(dta$[ADV_INTVL_INDEX],i,0)
-    AssertRC(rc,425)
+    AssertResCode(rc,425)
     rc=BleEncode8(dta$[ADV_TMT_INDEX],ADV_TIMEOUT_MINUTES,0)
-    AssertRC(rc,427)
+    AssertResCode(rc,427)
     rc=BleEncode8(dta$[CAL_VAL_INDEX],CALIBRTD_VALUE_DBM,0)
-    AssertRC(rc,429)
+    AssertResCode(rc,429)
     rc=BleEncode8(dta$[REM_CONN_TME_INDEX],REMAIN_CONN_TME_SEC,0)
-    AssertRC(rc,431)
+    AssertResCode(rc,431)
 EndSub
 
 
@@ -476,9 +490,9 @@ Function CreateIBeaconAD$()
     '// ---
     dim mad$                                               //octet string for the AD (advertising record)
     rc=BleEncode16(mad$,COMPANY_ID,0)                      //write company id to string 
-    AssertRC(rc,478)
+    AssertResCode(rc,478)
     rc=BleEncode8(mad$,BEACON_DATA_TYPE,2)                 //write data type to string
-    AssertRC(rc,480)
+    AssertResCode(rc,480)
 
     '//Convert Calibrated RSSI Value to integer
     dim calVal : rc=BleDecodeS8(dta$[CAL_VAL_INDEX],calVal,0)
@@ -489,7 +503,7 @@ Function CreateIBeaconAD$()
     dim mesTxPwr : mesTxPwr = calVal - (4 - txPwr)
     '//Write Measured RSSI to string
     dim mesTxPwr$ : rc=BleEncode8(mesTxPwr$,mesTxPwr,0)
-    AssertRC(rc,491)
+    AssertResCode(rc,491)
     
     '//Put together AD depending on selected format
     dim len$                                              //number of bytes to follow in AD
@@ -499,21 +513,58 @@ Function CreateIBeaconAD$()
     select bcnFrmt
         case 1            
             rc=BleEncode8(len$,0x14,0)                      //length = 20 bytes
-            AssertRC(rc,501)
+            AssertResCode(rc,501)
             '//UUID - Major - Minor]
             mad$=mad$+len$+dta$[UUID_INDEX]+dta$[MAJOR_INDEX]+dta$[MINOR_INDEX]      
         case 2
             rc=BleEncode8(len$,0x10,0)                      //length = 16 bytes
-            AssertRC(rc,506)
+            AssertResCode(rc,506)
             '//UUID
             mad$=mad$+len$+dta$[UUID_INDEX]
         case else
             rc=BleEncode8(len$,0x15,0)                      //length = 21 bytes
-            AssertRC(rc,511)
+            AssertResCode(rc,511)
             '//Full AD
             mad$=mad$+len$+dta$[UUID_INDEX]+dta$[MAJOR_INDEX]+dta$[MINOR_INDEX]+mesTxPwr$  
     endselect 
 EndFunc mad$
+
+  
+    
+'//------------------------------------------------------------------------------
+'// Calculates and returns the current battery level from the power supply voltage
+'//------------------------------------------------------------------------------
+Function GetBattLevel()
+    dim mv : mv = READPWRSUPPLYMV()     //power supply in mv
+    dim perc                            //battery level in %  
+    
+  
+    if(mv >= BATT_100_PERC_THRESH_MV) then
+        perc = 100
+    elseif (mv <= BATT_0_PERC_THRESH_MV) then
+        perc = 0
+    else
+        perc = ((mv * 833) - 1500000) / 10000
+    endif
+    
+Endfunc perc
+
+
+
+//------------------------------------------------------------------------------
+// Used by custom.battery.service.sblib to add battery service uuid to scan report
+//------------------------------------------------------------------------------
+sub AddUuid(uuid)
+    rc=BleAdvRptAddUuid16(scnRpt$,UUID_BATTERY_SERVICE,-1,-1,-1,-1,-1)
+    AssertResCode(rc,557)
+endsub
+
+
+'//------------------------------------------------------------------------------
+'// Library Import
+'//------------------------------------------------------------------------------
+#include "lib\custom.battery.service.sblib"
+
 
 '//------------------------------------------------------------------------------
 '// Create and Commit advert reports
@@ -521,24 +572,30 @@ EndFunc mad$
 Sub MakeAdvertRpts()
     '//Initialise the Advert report (no appearance AD)
     rc=BleAdvRptInit(advRpt$, DISCOVERY_MODE, 0, MAX_DEVNAME_CHRS_IN_ADVERT)
-    AssertRC(rc,523)
+    AssertResCode(rc,523)
     
     '//create and append the apple iBeacon AD element 
     dim adElmnt$ : adElmnt$=CreateIBeaconAD$()
     rc=BleAdvRptAppendAD(advRpt$,0xFF,adElmnt$)
-    AssertRC(rc,528)
+    AssertResCode(rc,528)
     
     '//Initialise the scan report
     rc=BleScanRptInit(scnRpt$)
-    AssertRC(rc,532)
+    AssertResCode(rc,532)
 
     '//Add device name to scan report -- comment statement if you don't want
     rc=BleAdvRptAppendAD(scnRpt$,0x09,dta$[DVC_NME_INDEX])
-    AssertRC(rc,536)
-
+    AssertResCode(rc,536)
+    
+    '//Initialise the Battery Service and add uuid to scan report - only if it hasn't been done already (timer 0 not running)
+    if TimerRunning(0)==0 then
+        InitBatService(GetBattLevel(),0)
+        TimerStart(0,60000*BATT_LEVEL_POLL_MIN,1)       //so we can update the battery level every BATT_LEVEL_POLL_MIN minutes 
+    endif
+    
     '//Commit the reports to stack
     rc=BleAdvRptsCommit(advRpt$,scnRpt$)
-    AssertRC(rc,540)
+    AssertResCode(rc,540)
 EndSub
 
 
@@ -548,10 +605,10 @@ EndSub
 Sub NewChar(ByRef hBsUuid, ByVal chrUuid,  ByVal index)
     '//Create characteristic with 16bit uuid offset from Laird base uuid, r/w enabled   
     rc=BleCharNew(0x0A, BleHandleUuidSibling(hBsUuid,(chrUuid)), BleAttrMetaData(1,1,dtaLen[index],1,rc),0,0)
-    AssertRC(rc,550)
+    AssertResCode(rc,550)
     '//Commit this new characteristic to the GATT table as part of iBeacon service
     rc=BleCharCommit(hSvc,dta$[index],charHndles[index])  
-    AssertRC(rc,553)
+    AssertResCode(rc,553)
 EndSub
 
 
@@ -561,10 +618,10 @@ EndSub
 Sub NewCharAdptd(ByVal chrUuid,  ByVal index)
     '//Create characteristic with 16bit uuid offset from Bluetooth SIG base uuid, r/w enabled   
     rc=BleCharNew(0x0A, BleHandleUuid16(chrUuid), BleAttrMetaData(1,1,dtaLen[index],1,rc),0,0)
-    AssertRC(rc,563)
+    AssertResCode(rc,563)
     '//Commit this new characteristic to the GATT table as part of iBeacon service
     rc=BleCharCommit(hSvc,dta$[index],charHndles[index])   
-    AssertRC(rc,566)
+    AssertResCode(rc,566)
 EndSub
 
 
@@ -578,9 +635,9 @@ Sub CreateIBeaconSvc()
     '//iBeacon service UUID handle
     dim hSvcUuid : hSvcUuid=BleHandleUuidSibling(hBseUuid,IBEACON_SVC_UUID)
     
-    '//Commit the iBeacon service to GATT table
-    rc=BleSvcCommit(1,hSvcUuid,hSvc)
-    AssertRC(rc,582)
+    '//Initialise iBeacon service 
+    rc=BleServiceNew(1,hSvcUuid,hSvc)
+    AssertResCode(rc,582)
     
     '//Create and commit Characteristics   
     NewChar(hBseUuid,0x2010,DVC_NME_INDEX)       //Device Name
@@ -593,6 +650,11 @@ Sub CreateIBeaconSvc()
     NewChar(hBseUuid,0x2016,ADV_TMT_INDEX)        //Advertising Timeout  
     NewChar(hBseUuid,0x2017,CAL_VAL_INDEX)        //Calibration Value 
     NewChar(hBseUuid,0x2018,REM_CONN_TME_INDEX)   //Remain Connectable Time
+    
+    '//Commit the iBeacon service to GATT table
+    rc=BleServiceCommit(hSvc)
+    AssertResCode(rc,598)
+    
 EndSub
 
 
@@ -605,7 +667,7 @@ Sub StartAdvertising(ByVal advType)
 
     '//update the gap service just in case a new name arrived
     rc=BleGapSvcInit(dta$[DVC_NME_INDEX],0,APPEARANCE,MIN_CONN_INTERVAL,MAX_CONN_INTERVAL,CONN_SUP_TIMEOUT,SLAVE_LATENCY)
-    AssertRC(rc,607)
+    AssertResCode(rc,612)
     
     '//Make and commit advert reports
     MakeAdvertRpts()   
@@ -613,7 +675,7 @@ Sub StartAdvertising(ByVal advType)
     '//Set tx power
     rc=BleDecodeS8(dta$[TXPOWER_INDEX],tx,0) 
     rc=BleTxPowerSet(tx)
-    AssertRC(rc,615)
+    AssertResCode(rc,620)
     
     '//Convert advertising interval to integer
     rc=BleDecodeU8(dta$[ADV_INTVL_INDEX],advIntvl,0)   
@@ -635,9 +697,12 @@ Sub StartAdvertising(ByVal advType)
     
     '//Start advertising
     rc=BleAdvertStart(advType,prAddr$, advIntvl, advTmt,0)
-    AssertRC(rc,637)
+    AssertResCode(rc,642)
     
 EndSub 
+
+
+
       
         
 '//------------------------------------------------------------------------------
@@ -651,10 +716,12 @@ Sub OnStartup()
     
     '//Initialise the Gap Service 
     rc=BleGapSvcInit(dta$[DVC_NME_INDEX],0,APPEARANCE,MIN_CONN_INTERVAL,MAX_CONN_INTERVAL,CONN_SUP_TIMEOUT,SLAVE_LATENCY)
-    AssertRC(rc,653)
+    AssertResCode(rc,658)
     
     '//Initialise the Device Information service
     rc=BleSvcRegDevInfo(MANF_NAME,MODELSTR,SERIALNUM,HWREV,APP_VERSION,"","","")
+    
+         
    
     '//Create and commit iBeacon service and characteristics
     CreateIBeaconSvc()   
@@ -662,6 +729,9 @@ Sub OnStartup()
     '//Start advertising with type 0 = connectible
     StartAdvertising(ADV_IND) 
 EndSub
+
+
+
 
 
 
@@ -691,7 +761,7 @@ Function HANDLERCHARVAL   //see the #define on line 20 or 21 in $autorun$.iBeaco
         
         '//read new value of selected char
         rc=BleCharValueRead(charHndles[i],s$)
-        AssertRC(rc,693)
+        AssertResCode(rc,698)
         
         '//get length of new char value that arrived
         l = StrLen(s$)
@@ -705,7 +775,7 @@ Function HANDLERCHARVAL   //see the #define on line 20 or 21 in $autorun$.iBeaco
             else
                 '//Overwrite char with previous value
                 rc=BleCharValueWrite(charHndles[i],dta$[i])
-                AssertRC(rc,707)
+                AssertResCode(rc,712)
             endif
         else
             select i
@@ -718,17 +788,17 @@ Function HANDLERCHARVAL   //see the #define on line 20 or 21 in $autorun$.iBeaco
                 else
                     '//Overwrite char with previous value
                     rc=BleCharValueWrite(charHndles[i],dta$[i])
-                    AssertRC(rc,720)
+                    AssertResCode(rc,725)
                     break   //don't need to do any of the below if char value is overwritten
                 endif
                 
                 '//Validate if tx power, convert result back to string
                 case TXPOWER_INDEX
                     rc=BleEncode8(s$,ValidateTxPwr(s$),0)
-                    AssertRC(rc,727)
+                    AssertResCode(rc,732)
                     '//Overwrite char value in case it was changed
                     rc=BleCharValueWrite(charHndles[i],s$)
-                    AssertRC(rc,730)
+                    AssertResCode(rc,735)
                     
                 '//Validate if remain connectible time  
                 case REM_CONN_TME_INDEX
@@ -739,9 +809,9 @@ Function HANDLERCHARVAL   //see the #define on line 20 or 21 in $autorun$.iBeaco
                     if remConn<REMAIN_CONN_TME_SEC_MIN then
                         '//Overwrite char with default
                         rc=BleEncode8(dta$[i],REMAIN_CONN_TME_SEC_MIN,0)
-                        AssertRC(rc,741)
+                        AssertResCode(rc,746)
                         rc=BleCharValueWrite(charHndles[i],dta$[i])
-                        AssertRC(rc,743)
+                        AssertResCode(rc,748)
                     endif
                     
                 '//Validate if advertising interval
@@ -752,9 +822,9 @@ Function HANDLERCHARVAL   //see the #define on line 20 or 21 in $autorun$.iBeaco
                         '//value too low, so override with minimum allowed
                         advIntvl = (ADV_MIN_INTERVAL_MS/ADV_INTERVAL_SCALER)
                         rc=BleEncode8(dta$[ADV_INTVL_INDEX],(ADV_INTERVAL_MS/ADV_INTERVAL_SCALER),0)
-                        AssertRC(rc,754)
+                        AssertResCode(rc,759)
                         rc=BleCharValueWrite(charHndles[i],dta$[i])
-                        AssertRC(rc,756)
+                        AssertResCode(rc,761)
                     endif
                 case else
             endselect                     
@@ -788,6 +858,15 @@ Function HndlrBleAdvTmt()
 EndFunc 1 
 
 
+'//------------------------------------------------------------------------------
+'// Called when timer 0 expires -> Update the battery level
+'//------------------------------------------------------------------------------
+Function HndlrTmr0()
+    '//Update the battery level
+    rc=SetBattLevel(GetBattLevel())
+EndFunc 1
+
+
 
 '//******************************************************************************
 '// Equivalent to main() in C
@@ -804,6 +883,7 @@ OnEvent EvBle_Adv_Timeout  call HndlrBleAdvTmt
                    '// This was a change introduced in firmware v1.3.57.21
                    '//*******************************************************
 OnEvent EvCharVal  call HndlrCharVal
+OnEvent EvTmr0     call HndlrTmr0
 
 OnError next HndlrErr
  
