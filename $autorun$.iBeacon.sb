@@ -49,7 +49,7 @@
 #define BEACON_MAJOR                         0x1234
         '// Default Minor value for beacon (16 bit number)
 #define BEACON_MINOR                         0x5678
-        '// Default TxPower, one of (4,0,-4,-8,-12,-16,-20,-40,-50) 
+        '// Default TxPower, one of (4,0,-4,-8,-12,-16,-20,-30,-55) 
 #define BEACON_TXPOWER_DBM                   4
         '//RSSI at 1m from BL600 when tx power = 4 
         '//Set this by advertising at 4 dBm and measuring the RSSI 1m from the BL600
