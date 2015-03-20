@@ -1,0 +1,74 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2015
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+'// +++++  which consists of all characters up to the first . and excluding it ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'//
+'// Power efficient button press/release example using GpioAssignEvent
+'// Shows how to detect a button press and release seperately by switching
+'// GpioAssignEvent, works on DVK-BL600 development board.
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim rc                                      //Result code variable
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+
+FUNCTION Btn0Up()
+    //Runs when button 0 has been released
+    print "Button 0 has been released!\n"
+    rc = SendMsgApp(1, 0)
+ENDFUNC 1
+
+FUNCTION Btn0Down()
+    //Runs when button 0 has been pressed
+    print "Button 0 has been pressed!\n"
+    rc = SendMsgApp(0, 0)
+ENDFUNC 1
+
+FUNCTION HandlerMsgApp(BYVAL nMsgId AS INTEGER, BYVAL nMsgCtx AS INTEGER) AS INTEGER
+    //Used to handle messages sent to switch events
+    IF nMsgID == 1 then
+        //Switch to button press 2 event
+        rc = GPIOUnassignEvent(0)           //Removes the previous assignment
+        rc = GPIOASSIGNEVENT(0, 16, 1)      //Assign a high-to-low transition event for button 0
+        ONEVENT EVDETECTCHAN0 CALL Btn0Down //Reassign the event for when button is pressed
+    else
+        //Switch to button press 1 event
+        rc = GPIOUnassignEvent(0)           //Removes the previous assignment
+        rc = GPIOAssignEvent(0, 16, 0)      //Assign a low-to-high transition event for button 0
+        ONEVENT EVDETECTCHAN0 CALL Btn0Up   //Reassign the event for when button is released
+    endif
+ENDFUNC 1
+
+'//******************************************************************************
+'// Equivalent to main() in C
+'//******************************************************************************
+
+rc = GPIOSetFunc(16,1,2)                    //Sets sio16 (Button 0) as a digital in with a weak pull up resistor
+rc = GPIOAssignEvent(0, 16, 1)              //Assign a high-to-low transition event for button 0
+
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+ONEVENT EVMSGAPP CALL HandlerMsgApp         //This is the handler for application messages
+ONEVENT EVDETECTCHAN0 CALL Btn0Down         //This is the handler for when button 0 has been pressed
+
+'//------------------------------------------------------------------------------
+'// Wait for a synchronous event.
+'// An application can have multiple <WaitEvent> statements
+'//------------------------------------------------------------------------------
+
+WAITEVENT                                   //When program is run it waits here until an event is detected
