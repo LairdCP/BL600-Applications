@@ -28,6 +28,7 @@ dim shBat as integer
 dim chBatlvl as integer
 dim batlvl$ as string
 
+
 '//******************************************************************************
 '// Initialise Global Variable
 '//******************************************************************************
@@ -57,7 +58,12 @@ function AddCharBatLevel(byval btlvl as integer, byval fNfy as integer) as integ
   dim mdAttr
   dim mdCccd
   dim mdSccd
-  dim chProp
+  dim chProp 
+  dim format : format = 0x04            // uint8 - unsigned 8-bit integer
+  dim exponent : exponent = 0
+  dim unit : unit = 0x27AD              // percentage
+  dim namespace : namespace = 0x01      // Bluetooth SIG
+  dim namespacedesc : namespacedesc = 0
   //dim attr$
 
   //++++
@@ -66,13 +72,14 @@ function AddCharBatLevel(byval btlvl as integer, byval fNfy as integer) as integ
   mdAttr=BleAttrMetadata(BLE_ATTR_ACCESS_OPEN,BLE_ATTR_ACCESS_NONE,1,0,rc)
   AssertResCode(rc,9200)
   //There is no CCCD in this characteristic
-  mdCccd = BLE_CHAR_METADATA_ATTR_NOT_PRESENT
+  mdCccd = BleAttrMetadata(BLE_ATTR_ACCESS_OPEN,BLE_ATTR_ACCESS_OPEN,1,0,rc)
+  AssertResCode(rc,9210)
   //There is no SCCD in this characteristic
   mdSccd = BLE_CHAR_METADATA_ATTR_NOT_PRESENT
   //Create the Characteristic object
-  chProp = BLE_CHAR_PROPERTIES_READ
+  chProp = BLE_CHAR_PROPERTIES_READ | BLE_CHAR_PROPERTIES_NOTIFY
   rc = BleCharNew(chProp,BleHandleUuid16(0x2A19),mdAttr,mdCccd,mdSccd)
-  AssertResCode(rc,9210)
+  AssertResCode(rc,9220)
 
   //++++
   //Add the USER_DESCRIPTION Descriptor
@@ -86,8 +93,8 @@ function AddCharBatLevel(byval btlvl as integer, byval fNfy as integer) as integ
   //++++
   //Add the PRESENTATION FORMAT Descriptor
   //++++
-  //rc = BleCharDescPrstnFrmt(format,exponent,unit,namespace,namespacedesc)
-  //AssertResCode(rc,9240)
+  rc = BleCharDescPrstnFrmt(format,exponent,unit,namespace,namespacedesc)
+  AssertResCode(rc,9240)
 
   //++++
   //Add the other Descriptor 0x29XX  -- first one
@@ -168,16 +175,24 @@ sub InitBatService(byval batlvl as integer, byval fNfy as integer)
 
 endsub
 
-'//==============================================================================
-'//==============================================================================
-function SetBattLevel(btLvl as integer) as integer
-  dim rc
 
+'//==============================================================================
+'//==============================================================================
+sub VerifyBattLevel()
   if btLvl < 0 then
     btLvl = 0
   elseif btLvl > 100 then
     btLvl = 100
   endif
+endsub  
+
+
+'//==============================================================================
+'//==============================================================================
+function SetBattLevel(btLvl as integer) as integer
+  dim rc
+
+  VerifyBattLevel()
 
   rc = BleEncode8(batlvl$,btlvl,0)
   rc = BleCharValueWrite(chBatlvl,batlvl$)
@@ -186,6 +201,18 @@ function SetBattLevel(btLvl as integer) as integer
 endfunc rc
 
 
+'//==============================================================================
+'//==============================================================================
+function NotifyBattLevel(btLvl as integer) as integer
+  dim rc
+
+  VerifyBattLevel()
+
+  rc = BleEncode8(batlvl$,btlvl,0)
+  rc = BleCharValueNotify(chBatlvl,batlvl$)
+  AssertResCode(rc,9600)
+
+endfunc rc
 
 '//******************************************************************************
 '// Handler definitions
