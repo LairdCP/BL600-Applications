@@ -1,0 +1,187 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2015
+'//
+'// DotStar.sblib
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+'// +++++  which consists of all characters up to the first . and excluding it ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// DotStar LED strip library
+'// 
+'// Please see the included example 'dotstar.example.sb' in the root BL600 folder
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+dim resultCode
+dim pixelColor
+dim numLEDs : numLEDs = 0
+dim pixel[256]
+dim brightness : brightness = 256 '256 steps of brightness (0-255)
+dim startFrame$ : startFrame$ = "\00\00\00\00"
+dim endFrame$ : endFrame$ = "\FF\FF\FF\FF"
+dim brightness$ : brightness$ = "FF"
+dim hSPI
+dim spiTX$
+
+'//------------------------------------------------------------------------------
+'// For debugging
+'// --- rc = result code
+'// --- ln = line number         
+'//------------------------------------------------------------------------------
+Sub AssertRC(rc,ln)
+    if (ENABLE_DEBUG_PRINTS!=0 && rc!=0) then
+        print "\nFail :";integer.h' rc;" at tag ";ln
+    endif
+EndSub
+
+'//------------------------------------------------------------------------------
+'// Register Error Handler as early as possible
+'//------------------------------------------------------------------------------
+sub HandlerOnErr()
+  if (ENABLE_DEBUG_PRINTS!=0) then
+    print "\n OnErr - ";GetLastError();"\n"
+  endif
+endsub
+
+onerror next HandlerOnErr
+
+'//------------------------------------------------------------------------------
+'// Prime SPI for output
+'//------------------------------------------------------------------------------
+FUNCTION DotStarBegin(n as INTEGER)
+    numLEDs = n
+    resultCode = SPIOPEN(0, 8000000, 0, hSPI)    'Set SPI mode to 0, 1MHz, MSB First, w/ Handle attached to hSPI
+		AssertRC(resultCode, 60)
+ENDFUNC resultCode
+
+'//------------------------------------------------------------------------------
+'//LED#, R, G, B (0-255)
+'//------------------------------------------------------------------------------
+FUNCTION setDotStarPixelColor(n as INTEGER, r as INTEGER, g as INTEGER, b as INTEGER)
+    if (n < 0 || n > 255) then
+    else
+        dim color : color = (r << 16 | g << 8 | b)
+        pixel[n] = color
+		EXITFUNC pixel[n]
+    endif
+ENDFUNC -1
+
+'//------------------------------------------------------------------------------
+'//Retrieve specific n'th pixel color.
+'//------------------------------------------------------------------------------
+FUNCTION getDotStarPixelColor(n as INTEGER, byref r as INTEGER, byref g as INTEGER, byref b as INTEGER)
+    if (n < 0 || n > 255) then
+        EXITFUNC -1
+    else
+        r = ((pixel[n] & 0xFF0000) >> 16)    	'Find bits 0x00xx0000
+        g = ((pixel[n] & 0xFF00) >> 8)        	'Find bits 0x0000xx00
+        b = (pixel[n] & 0xFF)                	'Find bits 0x000000xx
+        EXITFUNC pixel[n]
+    endif
+ENDFUNC 0
+
+'//------------------------------------------------------------------------------
+'//Print all pixel data
+'//------------------------------------------------------------------------------
+SUB getDotStarPixels()
+    dim n : n = 0
+    dim r, g, b
+    while (n < numLEDs)
+        n = n + 1
+        pixelColor = (getDotStarPixelColor(n, r, g, b))
+        r = r >> 8
+        g = g >> 8
+        b = b >> 8
+        pixelColor = (r << 16 | g << 8 | b)
+		print "\n"; n; ":"; INTEGER.h'pixelColor
+    endwhile
+ENDSUB
+
+'//------------------------------------------------------------------------------
+'//Issue/Refresh color data to strip.
+'//------------------------------------------------------------------------------
+SUB DotStarUpdate()
+    dim n : n = numLEDs
+    dim r, g, b, i
+    dim r$, g$, b$, pixel$
+    
+    resultCode = SPIOPEN(0, 8000000, 0, hSPI)    'Set SPI mode to 0, 1MHz, MSB First, w/ Handle attached to hSPI
+    for i = 1 to 4
+        resultCode = SPIWRITE(startFrame$)
+    next
+	
+    while (n > 0)
+        n = n - 1
+        pixelColor = getDotStarPixelColor(n, r, g, b)
+        SPRINT #r$, INTEGER.H'r
+        SPRINT #g$, INTEGER.H'g
+        SPRINT #b$, INTEGER.H'b
+        
+        SPRINT #spiTX$, RIGHT$(brightness$,2); RIGHT$(b$, 2); RIGHT$(g$, 2); RIGHT$(r$, 2) 'Sent out in reverse order for the DotStar to frame pixels properly. 
+        'See LED datasheet at http://www.adafruit.com/datasheets/APA102.pdf
+        pixel$ = StrDehexize$(spiTX$)
+        resultCode = SpiWrite(pixel$)
+    endwhile
+    
+    'for i = 1 to 4
+        'resultCode = SPIWRITE(endFrame$)
+    'next
+    SpiClose(hSPI)
+ENDSUB
+
+'//------------------------------------------------------------------------------
+'//Set all pixel data to zero
+'//------------------------------------------------------------------------------
+SUB DotStarClear()
+    dim n : n = numLEDs
+    while (n > 0)
+        n = n - 1
+        pixelColor = setDotStarPixelColor(n, 0, 0, 0)
+    endwhile
+    DotStarUpdate()
+ENDSUB
+
+'//------------------------------------------------------------------------------
+'//Number of Pixels in strip
+'//------------------------------------------------------------------------------
+FUNCTION numPixels()
+ENDFUNC numLEDs
+
+'//------------------------------------------------------------------------------
+'//Current Brightness
+'//------------------------------------------------------------------------------
+FUNCTION getDotStarBrightness()
+ENDFUNC brightness
+
+'//------------------------------------------------------------------------------
+'//Set Brightness
+'//------------------------------------------------------------------------------
+SUB setDotStarBrightness(br as INTEGER)
+    if (br < 0 || br > 31) then
+        brightness = 31 + 224
+    else
+        brightness = br + 224
+    endif
+	
+	SPRINT #brightness$, INTEGER.h'brightness
+ENDSUB
+
+'//------------------------------------------------------------------------------
+'//Change length
+'//------------------------------------------------------------------------------
+SUB DotStarNewLength(n as INTEGER)
+    if (n < 0) then
+        numLEDs = 0
+    elseif (n > 255) then
+        numLEDs = 255
+	else
+		numLEDs = n
+    endif
+ENDSUB
