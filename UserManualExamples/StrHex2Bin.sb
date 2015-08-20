@@ -1,0 +1,6 @@
+//Example :: StrHex2Bin.sb (See in BL600CodeSnippets.zip)
+DIM s$
+s$="0102030405"
+PRINT StrHex2Bin(s$,4);"\n"     
+s$="4C61697264"
+PRINT StrHex2Bin(s$,2);"\n"

@@ -1,0 +1,13 @@
+//Example :: SendMsgApp.sb (See in BL600CodeSnippets.zip)
+DIM rc
+
+FUNCTION HandlerMsgApp(BYVAL nMsgId AS INTEGER, BYVAL nMsgCtx AS INTEGER) AS INTEGER
+  PRINT "\nId=";nMsgId;" Ctx=";nMsgCtx   
+ENDFUNC 1
+
+ONEVENT EVMSGAPP CALL HandlerMsgApp
+
+rc = SendMsgApp(100,200)
+
+WAITEVENT
+

@@ -1,0 +1,4 @@
+//Example :: GetLastError.sb (See in BL600CodeSnippets.zip)
+DIM err
+err = GetLastError()
+PRINT "\nerror  = 0x" ; INTEGER.H'err		

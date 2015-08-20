@@ -1,0 +1,2 @@
+//Example :: RAND.sb (See in BL600CodeSnippets.zip)
+PRINT "\nRandom number is ";RAND()

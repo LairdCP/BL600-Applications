@@ -1,0 +1,5 @@
+//Example :: SysInfo.sb (See in BL600CodeSnippets.zip)
+PRINT "\nSysInfo 1000   = ";SYSINFO(1000)    // BASIC compiler HASH value
+PRINT "\nSysInfo 2003   = ";SYSINFO(2003)    // Number of timers
+PRINT "\nSysInfo 0x8010 = ";SYSINFO(0x8010)  // Code memory page size from FICR
+

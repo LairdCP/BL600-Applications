@@ -1,0 +1,5 @@
+//Example :: GpioSetFunc.sb (See in BL600CodeSnippets.zip)
+PRINT GpioSetFunc(3,1,2)    //Digital In Gpio pin 3, weak pull up resistor
+PRINT GpioSetFunc(4,3,0)    //Analog In Gpio pin 4, default settings
+PRINT GpioSetFunc(5,1,0x12) //internal pull up on gpio5 and wake from deep sleep
+                            //when there is transition from high to low

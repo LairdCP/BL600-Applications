@@ -1,0 +1,4 @@
+//Example :: SystemStateSet.sb (See in BL600CodeSnippets.zip)
+
+//Put the module into deep sleep
+PRINT "\n"; SystemStateSet(0)   

@@ -1,0 +1,2 @@
+//Example :: BleSecMngrIoCap.sb (See in BL600CodeSnippets.zip)
+PRINT BleSecMngrIoCap(1)

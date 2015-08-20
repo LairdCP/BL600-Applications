@@ -1,0 +1,14 @@
+//Example :: GpioBindEvent.sb (See in BL600CodeSnippets.zip)
+FUNCTION Btn0Press()
+	PRINT "\nHello"
+ENDFUNC 0
+
+PRINT GpioBindEvent(0,16,1)			//Bind event 0 to high low transition on sio16 (button0)            
+ONEVENT EVGPIOCHAN0 CALL Btn0Press	//When event 0 happens, call Btn0Press
+	
+PRINT "\nPress button 0"	
+
+WAITEVENT									
+
+                   
+

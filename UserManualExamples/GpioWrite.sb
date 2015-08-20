@@ -1,0 +1,25 @@
+//Example :: GpioWrite.sb (See in BL600CodeSnippets.zip)
+
+DIM rc,dutycycle,freqHz,minFreq
+
+//set sio pin 1 to an output and initialise it to high
+PRINT GpioSetFunc(1,2,0);"\n"
+//set sio pin 5 to PWM output
+minFreq = 500
+PRINT GpioConfigPWM(minFreq,1024);"\n"   //set max pwm value/resolution to 1:1024
+PRINT GpioSetFunc(5,2,2);"\n"
+//set sio pin 7 to Frequency output
+PRINT GpioSetFunc(7,2,3);"\n\n"
+
+//set pin 1 to low
+GpioWrite(18,0)
+//set pin 1 to high
+GpioWrite(18,1)
+//Set the PWM output to 25%
+GpioWrite(5,256)   //256 = 1024/4
+//Set the FREQ output to 4.236 Khz
+GpioWrite(7,4236)
+
+//Note you can generate a chirp output on sio 7 by starting a timer which expires 
+//every 100ms and then in the timer handler call GpioWrite(7,xx) and then 
+//increment xx by a certain value

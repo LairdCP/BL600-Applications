@@ -1,0 +1,25 @@
+// Example :: GpioConfigPWM() (See in BL600CodeSnippets.zip)
+
+DIM rc
+DIM nFreqHz, nMaxRes
+
+// we want a minimum frequency of 500Hz so that we can use a 100Hz low pass filter to
+// create an analogue output which has a 100Hz bandwidth
+nFreqHz = 500
+// we want a resolution of 1:1000 in the generated analogue output
+nMaxRes = 1000
+
+PRINT GpioConfigPWM(nFreqHz,nMaxRes)
+
+PRINT "\nThe actual frequency of the PWM output is ";nFreqHz;"\n"  
+
+// now configure SIO2 pin as a PWM output
+PRINT GpioSetFunc(2,2,2)   //3rd parameter is subfunc == PWM output
+// Set PWM output to 0%
+GpioWrite(2,0)
+// Set PWM output to 50%
+GpioWrite(2,(nMaxRes/2))
+// Set PWM output to 100%
+GpioWrite(2,nMaxRes)        // any value >= nMaxRes will give a 100% duty cycle
+// Set PWM output to 33.333%
+GpioWrite(2,(nMaxRes/3))

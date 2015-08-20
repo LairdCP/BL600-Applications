@@ -1,0 +1,11 @@
+//Example :: LEFT$.sb (See in BL600CodeSnippets.zip)
+DIM newstring$				
+DIM s$ 				
+
+s$="Arsenic"
+newstring$ = LEFT$(s$,4)			
+print newstring$; "\n"
+
+
+
+

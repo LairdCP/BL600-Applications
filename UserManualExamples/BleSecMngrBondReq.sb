@@ -1,0 +1,4 @@
+//Example :: BleSecMngrBondReq.sb (See in BL600CodeSnippets.zip)
+IF BleSecMngrBondReq(0)==0 THEN
+	PRINT "\nBonding disabled"
+ENDIF

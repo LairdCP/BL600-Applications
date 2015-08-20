@@ -1,0 +1,5 @@
+//Example :: GpioRead.sb (See in BL600CodeSnippets.zip)
+DIM signal
+
+signal = GpioRead(3)   
+PRINT signal                    

@@ -1,0 +1,3 @@
+//Example :: BleSecMngrKeySizes.sb (See in BL600CodeSnippets.zip)
+PRINT BleSecMngrKeySizes(8,15)
+

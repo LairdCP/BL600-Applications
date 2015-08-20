@@ -1,0 +1,5 @@
+//Example :: StrLen$.sb (See in BL600CodeSnippets.zip)
+DIM s$
+s$="HelloWorld"
+PRINT "\n";s$;" is ";StrLen(S$);" bytes long"
+

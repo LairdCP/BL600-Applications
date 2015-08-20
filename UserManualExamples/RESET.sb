@@ -1,0 +1,2 @@
+//Example :: RESET.sb (See in BL600CodeSnippets.zip)
+RESET(0)	//force a reset of the module
