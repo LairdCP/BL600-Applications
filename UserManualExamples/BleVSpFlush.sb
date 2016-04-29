@@ -28,14 +28,14 @@ SUB CloseConnections()
     rc=BleDisconnect(conHndl)
     rc=BleAdvertStop()
     BleVspClose()
-    BleVspFlush(2)      //Flush both buffers
+    BleVspFlush(3)      //Flush both buffers
 ENDSUB
 
 //==============================================================================
 //  VSP Rx buffer event handler
 //==============================================================================
 FUNCTION HandlerVSpRx() AS INTEGER    
-    BleVspFlush(0)
+    BleVspFlush(1)
     PRINT "\nRx buffer flushed"
 ENDFUNC 1
 
