@@ -1,5 +1,18 @@
-//******************************************************************************
-// Laird Technologies (c) 2013
+// Copyright (c) 2013, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
 //
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // +++++                                                                      ++
@@ -51,22 +64,22 @@ onerror next HandlerOnErr
 // Global Variable Declarations
 //******************************************************************************
 
-dim flags                   //bit 0 set if startup called
+dim flags                   //Bit 0 set if startup called
 dim rc
 dim stRsp$ as string        //Uart rx data is stored here
 
 dim ok$,er$,pr$
-dim mnltk                   //min size of ltk
-dim mxltk                   //max size of ltk
-dim advFlags                //value for flags AD
+dim mnltk                   //Min size of ltk
+dim mxltk                   //Max size of ltk
+dim advFlags                //Value for flags AD
 dim adTag                   //AD Tag
 dim adDta$                  //AD Data
 
-dim i[NUM_OF_PARAMS],s$[NUM_OF_PARAMS]            // index 0 used for return values
+dim i[NUM_OF_PARAMS],s$[NUM_OF_PARAMS]            //Index 0 used for return values
 
-dim urtcmd$                 //cmd line from uart
-dim tkn$,tlen               //used by command parser
-dim hConnLast               //most recent connection handle
+dim urtcmd$                 //CMD line from uart
+dim tkn$,tlen               //Used by command parser
+dim hConnLast               //Most recent connection handle
 
 //******************************************************************************
 // Initialisse Global Variable
@@ -81,7 +94,7 @@ pr$    = "\r\n>"
 
 mnltk    = MIN_LTK_SIZE
 mxltk    = MAX_LTK_SIZE
-advFlags = DISCOVERY_MODE    //can be changed via 'fg' command
+advFlags = DISCOVERY_MODE    //Can be changed via 'fg' command
 
 //******************************************************************************
 // Function and Subroutine definitions
@@ -95,7 +108,7 @@ sub OnStartup()
   InitSecurityMngr(PAIRING_IOCAPABILITY,MIN_LTK_SIZE, MAX_LTK_SIZE)
   InitGapService()
   InitDisService()
-  //mark so that we now startup has occured
+  //Mark so that we know startup has occured
   flags = flags | 0x1
   print "\nStartup OK"
 endsub
@@ -172,7 +185,7 @@ function ParseType0(byref val as integer)
 endfunc rc
 
 //-------------------------------------------------------------------------
-//#CMD#// startup                  - start the ble
+//#CMD#// startup                  - Set the BLE configuration
 //-------------------------------------------------------------------------
 function _StartUp()
   if (flags & 0x1) then
@@ -182,8 +195,8 @@ function _StartUp()
 endfunc 0
 
 //-------------------------------------------------------------------------
-//#CMD#// txpower = nnnn           - set tx power to nnnn
-//#CMD#// txpower ?                - get tx power
+//#CMD#// txpower = nnnn           - Set tx power to nnnn
+//#CMD#// txpower ?                - Get tx power
 //-------------------------------------------------------------------------
 function _TxPower()
   rc = ParseType0(i[1])
@@ -199,20 +212,20 @@ function _TxPower()
 endfunc rc
 
 //-------------------------------------------------------------------------
-//#CMD#// getdevname               - prints the device name as in the gap service
+//#CMD#// getdevname               - Prints the device name as in the gap service
 //-------------------------------------------------------------------------
 function _GetDevName()
   print "\nDevice Name = ";BleGetDeviceName$()
 endfunc 0
 
 //-------------------------------------------------------------------------
-//#CMD#// advert 'start' n          - start adverts, n=0,1,2,3
-//#CMD#// advert 'stop'             - stop adverts
-//#CMD#// advert 'init'             - call InitAdvReports(advFlags)
-//#CMD#// advert 'interval' n       - interval in milliseconds
-//#CMD#// advert 'timeout' n        - timeout in milliseconds
-//#CMD#// advert 'filter' n         - filter policy 0,1,2,3 see ADV_FILTERPOLICY_xxx
-//#CMD#// advert 'peer' addr14hexBytes$ - peer addr for direct advert
+//#CMD#// advert 'start' n          - Start adverts, n=0,1,2,3
+//#CMD#// advert 'stop'             - Stop adverts
+//#CMD#// advert 'init'             - Call InitAdvReports(advFlags)
+//#CMD#// advert 'interval' n       - Interval in milliseconds
+//#CMD#// advert 'timeout' n        - Timeout in milliseconds
+//#CMD#// advert 'filter' n         - Filter policy 0,1,2,3 see ADV_FILTERPOLICY_xxx
+//#CMD#// advert 'peer' addr14hexBytes$ - Peer addr for direct advert
 //-------------------------------------------------------------------------
 function _Adverts()
   tlen = ExtractStrToken(urtcmd$,tkn$)
@@ -268,16 +281,16 @@ function _Connect()
     exitfunc 5
   endif
   if strcmp(tkn$,"cancel")==0 then
-    //cancel the connection attempt
+    //Cancel the connection attempt
     exitfunc BleConnectCancel()
   endif
   if strcmp(tkn$,"config")==0 then
-    //extract cfgID and store in i[1] 
+    //Extract cfgID and store in i[1] 
     tlen = ExtractIntToken(urtcmd$,i[1])
     if tlen == 0 then
       exitfunc 5
     endif
-    //extract value and store in i[2] 
+    //Extract value and store in i[2] 
     tlen = ExtractIntToken(urtcmd$,i[2])
     if tlen == 0 then
       exitfunc 5
@@ -286,27 +299,27 @@ function _Connect()
     exitfunc BleConnectConfig(i[1],i[2])  
   endif
   
-  //the current token has to be a mac address
+  //The current token has to be a mac address
   s$[1]=StrDehexize$(tkn$)
   if strlen(s$[1]) != 7 then
     exitfunc 5
   endif
-  //extract conntimeoutms and store in i[1] 
+  //Extract conntimeoutms and store in i[1] 
   tlen = ExtractIntToken(urtcmd$,i[1])
   if tlen == 0 then
     exitfunc 5
   endif
-  //extract minConnIntMs and store in i[2] 
+  //Extract minConnIntMs and store in i[2] 
   tlen = ExtractIntToken(urtcmd$,i[2])
   if tlen == 0 then
     exitfunc 5
   endif
-  //extract maxConnIntMs and store in i[3] 
+  //Extract maxConnIntMs and store in i[3] 
   tlen = ExtractIntToken(urtcmd$,i[3])
   if tlen == 0 then
     exitfunc 5
   endif
-  //extract sprvsnToutMs and store in i[4] 
+  //Extract sprvsnToutMs and store in i[4] 
   tlen = ExtractIntToken(urtcmd$,i[4])
   if tlen == 0 then
     exitfunc 5
@@ -314,24 +327,24 @@ function _Connect()
 endfunc BleConnect(s$[1],i[1],i[2],i[3],i[4])
 
 //-------------------------------------------------------------------------
-//#CMD#//  disconnect                  //most recent connection is disconnected
+//#CMD#//  disconnect                  //Most recent connection is disconnected
 //#CMD#//  disconnect connHandle
 //-------------------------------------------------------------------------
 function _Disconnect()  
-  // extract the optional handle
+  //Extract the optional handle
   tlen = ExtractIntToken(urtcmd$,i[1])
   if tlen == 0 then
-    //handle was not supplied
+    //Handle was not supplied
     i[1] = hConnLast
   endif
-  // handle was supplied
+  //Handle was supplied
 endfunc BleDisconnect(i[1])
 
 //==============================================================================
 //==============================================================================
 function OnUartCmd() as integer
-  rc=1 //assume there is an error
-  tlen = ExtractStrToken(urtcmd$,tkn$) //get first token
+  rc=1 //Assume there is an error
+  tlen = ExtractStrToken(urtcmd$,tkn$) //Get first token
   if tlen > 0 then
     
     if strcmp(tkn$,"startup")==0 then
@@ -356,7 +369,7 @@ function OnUartCmd() as integer
     //  rc = Proc_@@@@@()
     endif
   endif
-  // send a response back to the user
+  //Send a response back to the user
   UartRsp(rc)
 endfunc 1
 
@@ -370,7 +383,7 @@ endfunc 1
 function HandlerUartRx() as integer
   dim nMatch
 
-  //check if CR has been received
+  //Check if CR has been received
   nMatch=UartReadMatch(stRsp$,13)
   if nMatch!=0 then
     //CR exists in the input buffer
@@ -384,7 +397,7 @@ endfunc 1
 //==============================================================================
 function HandlerBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER) as integer
 
-  // Inform libraries
+  //Inform libraries
   //ConnMngrOnBleMsg(nMsgId,nCtx)
   AdvMngrOnBleMsg(nMsgId,nCtx)
 

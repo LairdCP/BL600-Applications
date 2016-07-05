@@ -1,53 +1,66 @@
-'//******************************************************************************
-'// Laird Technologies (c) 2013
-'//
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'// ######                                                                #######
-'// ######        Library File meant to be #included in files             #######
-'// ######                                                                #######
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'//
-'// This library contains contains Blood Pressure Service manager and should be
-'// #included in your app.
-'//
-'//******************************************************************************
+// Copyright (c) 2013, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// ######                                                                #######
+// ######        Library File meant to be #included in files             #######
+// ######                                                                #######
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// This library contains contains Blood Pressure Service manager and should be
+// #included in your app.
+//
+//******************************************************************************
 
-'//******************************************************************************
-'// Definitions
-'//******************************************************************************
+//******************************************************************************
+// Definitions
+//******************************************************************************
 
 #define MAX_BPM_LEN         20
 
-'//******************************************************************************
-'// Library Import
-'//******************************************************************************
+//******************************************************************************
+// Library Import
+//******************************************************************************
 
-'//******************************************************************************
-'// Global Variable Declarations
-'//******************************************************************************
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
 
-dim shBps as integer        '//Service handle
-dim chBpsMeas as integer    '//Blood Pressure Measurement Characteristic Handle
-dim chBpsFtr as integer     '//Blood Pressure Feature Characteristic Handle
+dim shBps as integer        //Service handle
+dim chBpsMeas as integer    //Blood Pressure Measurement Characteristic Handle
+dim chBpsFtr as integer     //Blood Pressure Feature Characteristic Handle
 
-dim indState                '//indication state 0 = off, 1 = on
-dim indwait                 '//0 means not waiting for an indication confirm
-dim dateTime$ as string     '//Date Time string -- must be 0 or 7 bytes long
+dim indState                //Indication state 0 = off, 1 = on
+dim indwait                 //0 means not waiting for an indication confirm
+dim dateTime$ as string     //Date Time string -- must be 0 or 7 bytes long
 
-dim sysPressure             '//Systolic pressure
-dim diasPressure            '//Diastolic pressure
-dim meanPressure            '//Mean Arterial Pressure
-dim nMeasStatus             '//Measurement Status see BLE_BPS_MEAS_STAT_xxx
-dim nPulseRate              '//Pulse Rate - beats per minute
-dim bpFeature               '//bp feature characteristic value 0..0xFFFF
-dim nUserId                 '//bp user id 0..255
-dim units                   '//0 for mmHg and 1 for Pascal
+dim sysPressure             //Systolic pressure
+dim diasPressure            //Diastolic pressure
+dim meanPressure            //Mean Arterial Pressure
+dim nMeasStatus             //Measurement Status see BLE_BPS_MEAS_STAT_xxx
+dim nPulseRate              //Pulse Rate - beats per minute
+dim bpFeature               //bp feature characteristic value 0..0xFFFF
+dim nUserId                 //bp user id 0..255
+dim units                   //0 for mmHg and 1 for Pascal
 
-dim bps$ as string          '//blood pressure measurement attribute
+dim bps$ as string          //Blood pressure measurement attribute
 
-'//******************************************************************************
-'// Initialisse Global Variable
-'//******************************************************************************
+//******************************************************************************
+// Initialisse Global Variable
+//******************************************************************************
 
 sysPressure     = 0
 diasPressure    = 0
@@ -55,18 +68,18 @@ meanPressure    = 0
 nPulseRate      = 0
 nMeasStatus     = 0
 dateTime$       = ""
-nUserId         = 254     //don't care
+nUserId         = 254  //Don't care
 bpFeature       = BLE_BPS_FEATURE_BODY_MOVEMENT_BIT + BLE_BPS_FEATURE_MEASUREMENT_POSITION_BIT
-units           = 0  //mmHg
+units           = 0    //mmHg
 
-'//******************************************************************************
-'// Function and Subroutine definitions
-'//******************************************************************************
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
 
-'//==============================================================================
-'// data to encode is in sysPressure,diasPressure,meanPressure,nPulseRate,
-'//                      nMeasStatus,dateTime$,nUserId,units
-'//==============================================================================
+//==============================================================================
+// data to encode is in sysPressure,diasPressure,meanPressure,nPulseRate,
+//                      nMeasStatus,dateTime$,nUserId,units
+//==============================================================================
 sub BpsEncode()
   dim rc
   dim encsz
@@ -84,13 +97,13 @@ sub BpsEncode()
     flgs  = flgs | b'1
   endif
 
-  //update if datetime present
+  //Update if datetime present
   if strlen(dateTime$) then
     flgs  = flgs | b'10
-    encsz = encsz + 7  //encoded datetime is 7 bytes long
+    encsz = encsz + 7  //Encoded datetime is 7 bytes long
   endif
 
-  //create the attribute buffer space
+  //Create the attribute buffer space
   rc= StrFill(bps$,0,encsz)
   //Save the flags field
   rc = BleEncode8(bps$,flgs,0)
@@ -117,8 +130,8 @@ sub BpsEncode()
 
 endsub
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function AddCharBpsMeas() as integer
   dim rc
 
@@ -203,8 +216,8 @@ function AddCharBpsMeas() as integer
 
 endfunc rc
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function AddCharBpsFeature() as integer
   dim rc
 
@@ -290,13 +303,13 @@ function AddCharBpsFeature() as integer
 
 endfunc rc
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function RegBpsService() as integer
   dim rc
 
   //----------------------------------------------------------------------------
-  //Create a Health Thermometer PRIMARY service attribure which has a uuid of 0x1810
+  // Create a Health Thermometer PRIMARY service attribure which has a uuid of 0x1810
   //----------------------------------------------------------------------------
   rc = BleSvcCommit(BLE_SERVICE_PRIMARY,BleHandleUuid16(0x1810),shBps)
   AssertResCode(rc,9100)
@@ -315,8 +328,8 @@ function RegBpsService() as integer
 
 endfunc rc
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 sub InitBpsService()
   dim rc
   rc = RegBpsService()
@@ -328,9 +341,9 @@ sub InitBpsService()
 endsub
 
 
-'//==============================================================================
-'// will return 0 if successfully sent
-'//==============================================================================
+//==============================================================================
+// will return 0 if successfully sent
+//==============================================================================
 function SendBpData() as integer
   dim rc
   rc = 1
@@ -346,31 +359,28 @@ function SendBpData() as integer
 endfunc rc
 
 
-'//==============================================================================
-'// MUST be called from the CHARHVC message handler
-'//==============================================================================
+//==============================================================================
+// MUST be called from the CHARHVC message handler
+//==============================================================================
 sub BpsOnCharHvc()
   indwait = 0
 endsub
 
 
-'//==============================================================================
-'// MUST be called from the CHARCCCD message handler
-'//==============================================================================
+//==============================================================================
+// MUST be called from the CHARCCCD message handler
+//==============================================================================
 sub BpsOnCharCccd(BYVAL nVal AS INTEGER)
   indState = nVal
 endsub
 
 
-
-'//******************************************************************************
-'// Handler definitions
-'//******************************************************************************
-
-
-'//******************************************************************************
-'// Other initialisations
-'//******************************************************************************
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
 
 
+//******************************************************************************
+// Other initialisations
+//******************************************************************************
 

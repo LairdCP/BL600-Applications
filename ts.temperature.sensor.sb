@@ -1,52 +1,63 @@
-'//******************************************************************************
-'// Laird Technologies (c) 2013
-'//
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'// +++++                                                                      ++
-'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
-'// +++++  which consists of all characters up to the first . and excluding it ++
-'// +++++                                                                      ++
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'//
-'// Poll Temperature sensor
-'//
-'//******************************************************************************
+// Copyright (c) 2013, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// +++++                                                                      ++
+// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+// +++++  which consists of all characters up to the first . and excluding it ++
+// +++++                                                                      ++
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// Poll Temperature sensor
+//
+//******************************************************************************
 
-'//******************************************************************************
-'// Definitions
-'//******************************************************************************
+//******************************************************************************
+// Definitions
+//******************************************************************************
 
-
-        '//The temperature sensor is polled this timeout
+        //The temperature sensor is polled this timeout
 #define TEMPERATURE_POLL_MS                  (2000)
 
-'//******************************************************************************
-'// Library Import
-'//******************************************************************************
+//******************************************************************************
+// Library Import
+//******************************************************************************
 
-'//******************************************************************************
-'// Global Variable Declarations
-'//******************************************************************************
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
 
-dim adRpt$ as string  '//contains the most recent Advertise report
-dim scRpt$ as string  '//contains the most recent scan report
-dim stRsp$ as string  '//Uart rx data is stored here
-dim rc                '//return code from function calls
-dim inconn            '//will be 0 for no connection, otherwise nonzsero
+dim adRpt$ as string  //Contains the most recent Advertise report
+dim scRpt$ as string  //Contains the most recent scan report
+dim stRsp$ as string  //Uart rx data is stored here
+dim rc                //Return code from function calls
+dim inconn            //Will be 0 for no connection, otherwise nonzsero
 dim oldtmp
 
+//******************************************************************************
+// Initialisse Global Variable
+//******************************************************************************
+inconn = 0            //No connection yet
 
-'//******************************************************************************
-'// Initialisse Global Variable
-'//******************************************************************************
-inconn = 0            '//no connection yet
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
 
-'//******************************************************************************
-'// Function and Subroutine definitions
-'//******************************************************************************
-
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 sub AssertResCode(rc,byval msg$ as string)
   if(rc!=0)then
     print "\n";msg$;" failed with ";integer.h' rc
@@ -55,67 +66,66 @@ sub AssertResCode(rc,byval msg$ as string)
   endif
 endsub
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 sub DbgMsg(byval msg$ as string)
   print msg$
 endsub
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 sub DbgVal(val)
   print val
 endsub
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 sub InitTempSensor()
-  '// poll sensor on a timer
+  //Poll sensor on a timer
   TimerStart(0,TEMPERATURE_POLL_MS,1)
 
-  '// Temperature sensor is AIN4 which is on the S3 pin
-  rc = GpioSetFunc(4,1,2)  //remover the pull resistor
+  //Temperature sensor is AIN4 which is on the S3 pin
+  rc = GpioSetFunc(4,1,2)  //Remove the pull resistor
   AssertResCode(rc,"GpioSetFunc")
 
-  rc = GpioSetFunc(4,3,0)  //set as analog in
+  rc = GpioSetFunc(4,3,0)  //Set as analog in
   AssertResCode(rc,"GpioSetFunc")
 endsub
 
 
-'//==============================================================================
-'// Bandgap = 1200mv
-'// Max Adc = 1024
-'// Input scaled by 2/3
-'//
-'// Hence mV = (((adc/MaxADC) * Bandgap)*3)/2
-'// refactoring for integer maths gives
-'//  mv = (adc * Bandgap * 3)/(MaxADC*2)
-'//  mv = (adc * 1200 * 3)/(1024 * 2)
-'//  mv = (adc *  600 * 3)/1024
-'//  mv = (adc *  150 * 3)/256
-'//  mv = (adc *   75 * 3)/128
-'//  mv = (adc *   225)/128
-'//==============================================================================
+//==============================================================================
+// Bandgap = 1200mv
+// Max Adc = 1024
+// Input scaled by 2/3
+//
+// Hence mV = (((adc/MaxADC) * Bandgap)*3)/2
+// refactoring for integer maths gives
+//  mv = (adc * Bandgap * 3)/(MaxADC*2)
+//  mv = (adc * 1200 * 3)/(1024 * 2)
+//  mv = (adc *  600 * 3)/1024
+//  mv = (adc *  150 * 3)/256
+//  mv = (adc *   75 * 3)/128
+//  mv = (adc *   225)/128
+//==============================================================================
 function Adc2Mv(adc)
   adc = (adc * 225)/128
 endfunc adc
 
-'//==============================================================================
-'//  ((1864-mV)*16)/1889 * 10 in 10th of mV
-'//==============================================================================
+//==============================================================================
+//  ((1864-mV)*16)/1889 * 10 in 10th of mV
+//==============================================================================
 function Mv2Temperature(mv)
   mv = ((1864-mV) * 160)/189
 endfunc mv
 
 
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
 
-'//******************************************************************************
-'// Handler definitions
-'//******************************************************************************
-
-'//==============================================================================
-'// This handler is called when TIMER 0 expires
-'//==============================================================================
+//==============================================================================
+// This handler is called when TIMER 0 expires
+//==============================================================================
 function HandlerTimer0() as integer
   dim mV,tmp
   mv = Adc2Mv(GpioRead(4))
@@ -127,27 +137,27 @@ function HandlerTimer0() as integer
 endfunc 1
 
 
-'//******************************************************************************
-'// Equivalent to main() in C
-'//******************************************************************************
+//******************************************************************************
+// Equivalent to main() in C
+//******************************************************************************
 
-'//------------------------------------------------------------------------------
-'// Enable synchronous event handlers
-'//------------------------------------------------------------------------------
-OnEvent  EVTMR0             call HandlerTimer0
+//------------------------------------------------------------------------------
+// Enable synchronous event handlers
+//------------------------------------------------------------------------------
+OnEvent  EVTMR0  call HandlerTimer0
 
-'//------------------------------------------------------------------------------
-'// Initialise and then wait for events
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Initialise and then wait for events
+//------------------------------------------------------------------------------
 
 DbgMsg( "\nPoll Temperature")
 
 InitTempSensor()
 
-'//------------------------------------------------------------------------------
-'// Wait for a synchronous event.
-'// A Script can have multiple <WaitEvent> statements
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Wait for a synchronous event.
+// A Script can have multiple <WaitEvent> statements
+//------------------------------------------------------------------------------
 DbgMsg( "\nWait for event")
 WaitEvent
 DbgMsg( "\nPost WAITEVENT" )

@@ -1,5 +1,18 @@
-//******************************************************************************
-// Laird Technologies (c) 2013
+// Copyright (c) 2013, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
 //
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // ######                                                                #######
@@ -25,8 +38,8 @@
 // Global Variable Declarations
 //******************************************************************************
 
-dim adRpt$ as string        //contains the most recent Advertise report
-dim scRpt$ as string        //contains the most recent scan report
+dim adRpt$ as string        //Contains the most recent Advertise report
+dim scRpt$ as string        //Contains the most recent scan report
 dim advUuid[6]              //These are the uuid's that are exposed
 dim advUuidCnt              //Uuid Counts for advert report
 
@@ -78,7 +91,7 @@ function InitAdvReports(advFlags as integer)
     endif
   endif
 
-  //create a minimal advertise report
+  //Create a minimal advertise report
   rc = BleAdvRptInit(adRpt$,advFlags,ADV_APPEARANCE,MAX_DEVNAME_CHRS)
   AssertResCode(rc,2030)
 
@@ -90,7 +103,7 @@ function InitAdvReports(advFlags as integer)
   rc = BleScanRptInit(scRpt$)
   AssertResCode(rc,2045)
 
-  //commit the advert and scan report to the scan
+  //Commit the advert and scan report to the scan
   rc = BleAdvRptsCommit(adRpt$,scRpt$)
   AssertResCode(rc,2050)
 

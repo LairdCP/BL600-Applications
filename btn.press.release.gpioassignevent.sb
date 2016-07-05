@@ -1,29 +1,42 @@
-'//******************************************************************************
-'// Laird Technologies (c) 2015
-'//
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'// +++++                                                                      ++
-'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
-'// +++++  which consists of all characters up to the first . and excluding it ++
-'// +++++                                                                      ++
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'//
-'//
-'// Power efficient button press/release example using GpioAssignEvent
-'// Shows how to detect a button press and release seperately by switching
-'// GpioAssignEvent, works on DVK-BL600 development board.
-'//
-'//******************************************************************************
+// Copyright (c) 2015, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// +++++                                                                      ++
+// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+// +++++  which consists of all characters up to the first . and excluding it ++
+// +++++                                                                      ++
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+//
+// Power efficient button press/release example using GpioAssignEvent
+// Shows how to detect a button press and release seperately by switching
+// GpioAssignEvent, works on DVK-BL600 development board.
+//
+//******************************************************************************
 
-'//******************************************************************************
-'// Global Variable Declarations
-'//******************************************************************************
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
 
 dim rc                                      //Result code variable
 
-'//******************************************************************************
-'// Function and Subroutine definitions
-'//******************************************************************************
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
 
 FUNCTION Btn0Up()
     //Runs when button 0 has been released
@@ -52,23 +65,23 @@ FUNCTION HandlerMsgApp(BYVAL nMsgId AS INTEGER, BYVAL nMsgCtx AS INTEGER) AS INT
     endif
 ENDFUNC 1
 
-'//******************************************************************************
-'// Equivalent to main() in C
-'//******************************************************************************
+//******************************************************************************
+// Equivalent to main() in C
+//******************************************************************************
 
 rc = GPIOSetFunc(16,1,2)                    //Sets sio16 (Button 0) as a digital in with a weak pull up resistor
 rc = GPIOAssignEvent(0, 16, 1)              //Assign a high-to-low transition event for button 0
 
-'//******************************************************************************
-'// Handler definitions
-'//******************************************************************************
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
 
 ONEVENT EVMSGAPP CALL HandlerMsgApp         //This is the handler for application messages
 ONEVENT EVDETECTCHAN0 CALL Btn0Down         //This is the handler for when button 0 has been pressed
 
-'//------------------------------------------------------------------------------
-'// Wait for a synchronous event.
-'// An application can have multiple <WaitEvent> statements
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Wait for a synchronous event.
+// An application can have multiple <WaitEvent> statements
+//------------------------------------------------------------------------------
 
 WAITEVENT                                   //When program is run it waits here until an event is detected

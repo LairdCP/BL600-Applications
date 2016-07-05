@@ -1,24 +1,37 @@
-'//******************************************************************************
-'// Laird Technologies (c) 2013
-'//
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'// +++++                                                                      ++
-'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
-'// +++++  which consists of all characters up to the first . and excluding it ++
-'// +++++                                                                      ++
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'//
-'// Virtual Serial Port "External" Loopback
-'//
-'//******************************************************************************
+// Copyright (c) 2013, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// +++++                                                                      ++
+// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+// +++++  which consists of all characters up to the first . and excluding it ++
+// +++++                                                                      ++
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// Virtual Serial Port "External" Loopback
+//
+//******************************************************************************
 
-'//******************************************************************************
-'// Definitions
-'//******************************************************************************
+//******************************************************************************
+// Definitions
+//******************************************************************************
 
-'//******************************************************************************
-'// Register Error Handler as early as possible
-'//******************************************************************************
+//******************************************************************************
+// Register Error Handler as early as possible
+//******************************************************************************
 sub HandlerOnErr()
   if (ENABLE_DEBUG_PRINTS!=0) then
     print "\n OnErr - ";GetLastError();"\n"
@@ -26,9 +39,9 @@ sub HandlerOnErr()
 endsub
 onerror next HandlerOnErr
 
-'//******************************************************************************
-'// Library Import
-'//******************************************************************************
+//******************************************************************************
+// Library Import
+//******************************************************************************
 #include "lib\debugging.routines.sblib"
 #include "lib\ble.sblib"
 #include "lib\standard.advert.mngr.sblib"
@@ -38,12 +51,12 @@ onerror next HandlerOnErr
 #include "lib\gap.service.sblib"
 #include "lib\device.information.service.sblib"
 
-'//******************************************************************************
-'// Debugging resource after libs
-'//******************************************************************************
+//******************************************************************************
+// Debugging resource after libs
+//******************************************************************************
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 sub DbgInfo(id as integer)
   select id
   case 0
@@ -56,35 +69,35 @@ sub DbgInfo(id as integer)
 endsub
 
 
-'//******************************************************************************
-'// Global Variable Declarations
-'//******************************************************************************
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
 
 dim stRsp$ as string        //Uart rx data is stored here
 dim ok$,er$
 dim msg$
-dim mnltk                   //min size of ltk
-dim mxltk                   //max size of ltk
-dim advFlags                //value for flags AD
+dim mnltk                   //Min size of ltk
+dim mxltk                   //Max size of ltk
+dim advFlags                //Value for flags AD
 dim adTag                   //AD Tag
 dim adDta$                  //AD Data
 
-dim tsz                     //txbuf size for vsp
-dim rsz                     //rxbuf size for vsp
+dim tsz                     //txbuf size for VSP
+dim rsz                     //rxbuf size for VSP
 dim uuhdl                   //Service uuid handle for VSP
-dim rx$                     //vsp read data stored here
-dim rxb                     //vsp read block size
+dim rx$                     //VSP read data stored here
+dim rxb                     //VSP read block size
 
-'//******************************************************************************
-'// Initialisse Global Variable
-'//******************************************************************************
+//******************************************************************************
+// Initialisse Global Variable
+//******************************************************************************
 
 ok$      = "\nOK\r\n>"
 er$      = "\nERROR\r\n>"
 
 mnltk    = MIN_LTK_SIZE
 mxltk    = MAX_LTK_SIZE
-advFlags = DISCOVERY_MODE    '//can be changed via 'fg' command
+advFlags = DISCOVERY_MODE    //Can be changed via 'fg' command
 
 adTag    = 0
 adDta$   = ""
@@ -95,13 +108,13 @@ uuhdl    = 0
 
 rxb      = 60
 
-'//******************************************************************************
-'// Function and Subroutine definitions
-'//******************************************************************************
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
 
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 sub UartRsp(rsp as integer)
   dim rc
   if rsp == 0 then
@@ -111,16 +124,16 @@ sub UartRsp(rsp as integer)
   endif
 endsub
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 sub UartMsg(byref msg$ as string)
   dim rc
   rc = UartWrite(msg$)
 endsub
 
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function StartAds(adv as integer) as integer
   dim rc
   rc=StartAdverts(adv)
@@ -129,8 +142,8 @@ function StartAds(adv as integer) as integer
   endif
 endfunc rc
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function StopAds() as integer
   dim rc
   rc=StopAdverts()
@@ -139,8 +152,8 @@ function StopAds() as integer
   endif
 endfunc rc
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function ProcAdvCmd(vl as integer) as integer
   dim rc
   if vl==0 then
@@ -151,8 +164,8 @@ function ProcAdvCmd(vl as integer) as integer
   endif
 endfunc rc
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 sub ShowConnParms(nCtx as integer)
   dim rc
   dim intrvl,sprvto,slat
@@ -166,8 +179,8 @@ sub ShowConnParms(nCtx as integer)
 endsub
 
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function ProcScanData(st$ as string)
   dim rc
   rc = 1
@@ -179,48 +192,48 @@ function ProcScanData(st$ as string)
 endfunc rc
 
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function VSpOpen(flgs)
   dim rc
   rc = BleVSpOpen(tsz,rsz,flgs,uuhdl)
   AssertResCode(rc,7400)
   if rc==0 then
-   print "\nBleVSpOpen() OK  (uuhdl=";uuhdl;")\n"
-    //get the rx read block size, and limit to 60 so that large block
+    print "\nBleVSpOpen() OK  (uuhdl=";uuhdl;")\n"
+    //Get the rx read block size, and limit to 60 so that large block
     //from heap is not taken
     rxb = BleVspInfo(1)
     if rxb > 60 then
       rxb = 60
     endif
   else
-  print "\nBleVSpOpen() FAILED  (rc=";rc;")\n"
+    print "\nBleVSpOpen() FAILED  (rc=";rc;")\n"
   endif
 endfunc rc
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function VSpClose()
   BleVSpClose()
- print "\nBleVSpClose() OK"
+  print "\nBleVSpClose() OK"
 endfunc 0
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function VSpInfo(itype)
- print "\nBleVSpInfo(";itype;") returned ";BleVSpInfo(iType)
+  print "\nBleVSpInfo(";itype;") returned ";BleVSpInfo(iType)
 endfunc 0
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function VSpWrite(x$)
   dim n
   n = BleVSpWrite(x$)
- print "\nBleVSpWrite(x$) returned ";n;" and len of x$ was ";strlen(x$)
+  print "\nBleVSpWrite(x$) returned ";n;" and len of x$ was ";strlen(x$)
 endfunc 0
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function VSpWriteEx(ln)
   dim n,r,x$
   r=strfill(x$,0,ln)
@@ -231,23 +244,23 @@ function VSpWriteEx(ln)
       r = strsetchr(x$,r,n)
     next
     r = BleVSpWrite(x$)
-   print "\nBleVSpWrite(x$) returned ";r;" and len of x$ was ";strlen(x$)
+    print "\nBleVSpWrite(x$) returned ";r;" and len of x$ was ";strlen(x$)
   else
     exitfunc r
   endif
 endfunc 0
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function VSpRead(ilen)
   dim n
   n = BleVSpRead(rx$,ilen)
-print "\nBleVSpRead(,";ilen;") returned ";n;" and datalen ";strlen(rx$)
- print "\nData=";rx$
+  print "\nBleVSpRead(,";ilen;") returned ";n;" and datalen ";strlen(rx$)
+  print "\nData=";rx$
 endfunc 0
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function VSpAdvert()
   dim rc,rpt$
   rc = BleAdvRptAddUuid128(scRpt$,uuhdl)
@@ -258,32 +271,32 @@ function VSpAdvert()
     AssertResCode(rc,7420)
   endif
   if rc == 0 then
-   print "\nVSP added 128 uuid to scanrpt"
+    print "\nVSP added 128 uuid to scanrpt"
   endif
 endfunc rc
 
-'//==============================================================================
-'// This is called to start things off just before the waitevent at the end of
-'// the file
-'//==============================================================================
+//==============================================================================
+// This is called to start things off just before the waitevent at the end of
+// the file
+//==============================================================================
 sub OnStartup()
   dim rc
 
   InitSecurityMngr(PAIRING_IOCAPABILITY,MIN_LTK_SIZE, MAX_LTK_SIZE)
 
-  // Initialise services
+  //Initialise services
   InitGapService()
   InitDisService()
 
-  // Initiliase advert and scan reports
+  //Initiliase advert and scan reports
   InitAdvReports(advFlags)
 
-  // Initialise VSP service (without modem characteristics)
+  //Initialise VSP service (without modem characteristics)
   rc = VSpOpen(2)
   AssertResCode(rc,7982)
   print "\nVSP Opened"
 
-  // add the VSP service to the scan report
+  //Add the VSP service to the scan report
   rc = VSpAdvert()
   AssertResCode(rc,7981)
   rc = StartAds(ADV_IND)
@@ -292,16 +305,16 @@ sub OnStartup()
 endsub
 
 
-'//******************************************************************************
-'// Handler definitions
-'//******************************************************************************
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
 
-'//==============================================================================
-'// This handler is called when there is a BLE message
-'//==============================================================================
+//==============================================================================
+// This handler is called when there is a BLE message
+//==============================================================================
 function HandlerBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER) as integer
 
-  '// Inform libraries
+  //Inform libraries
   ConnMngrOnBleMsg(nMsgId,nCtx)
   AdvMngrOnBleMsg(nMsgId,nCtx)
 
@@ -346,53 +359,53 @@ function HandlerBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER) as intege
   endselect
 endfunc 1
 
-'//==============================================================================
-'// This handler is called when data has arrived at the virtual serial port
-'// or if the vsp tx buffer is empty
-'//==============================================================================
+//==============================================================================
+// This handler is called when data has arrived at the virtual serial port
+// or if the vsp tx buffer is empty
+//==============================================================================
 function HandlerLoop()
   BleVSpUartBridge()
 endfunc 1
 
-'//==============================================================================
-'// This handler is called when data has arrived at the serial port
-'//==============================================================================
+//==============================================================================
+// This handler is called when data has arrived at the serial port
+//==============================================================================
 function HandlerBlrAdvTimOut() as integer
 
   if AdvMngrOnAdvTimeOut() == 0 then
 
     DbgMsg( "\nAdvert stopped via timeout" )
-    '//DbgMsg( "\n   - could use SystemStateSet(0) to switch off" )
+    //DbgMsg( "\n   - could use SystemStateSet(0) to switch off" )
 
-    '//------------------------------------------------------------
-    '//  Switch off the system - requires a power cycle to recover
-    '//------------------------------------------------------------
-    '//  rc = SystemStateSet(0)
-    '//  AssertResCode(rc,1199)
+    //------------------------------------------------------------
+    //  Switch off the system - requires a power cycle to recover
+    //------------------------------------------------------------
+    //  rc = SystemStateSet(0)
+    //  AssertResCode(rc,1199)
   endif
 
 endfunc 1
 
-'//******************************************************************************
-'// Equivalent to main() in C
-'//******************************************************************************
+//******************************************************************************
+// Equivalent to main() in C
+//******************************************************************************
 
-'//------------------------------------------------------------------------------
-'// Enable synchronous event handlers
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Enable synchronous event handlers
+//------------------------------------------------------------------------------
 
 OnEvent  EVBLE_ADV_TIMEOUT  call HandlerBlrAdvTimOut
-OnEvent  EVBLEMSG           call HandlerBleMsg //EVBLEMSG indicate when signifficant BLE event occurs. Function HandlerBleMsg is called to interparate Message ID and context
+OnEvent  EVBLEMSG           call HandlerBleMsg  //EVBLEMSG indicate when signifficant BLE event occurs. Function HandlerBleMsg is called to interparate Message ID and context
 
-//all events have the same handler
-OnEvent  EVVSPRX            call HandlerLoop //EVVSPRX is thrown when VSP is open and data has arrived
-OnEvent  EVUARTRX           call HandlerLoop //EVUARTRX  = data has arrived at the UART interface
+//All events have the same handler
+OnEvent  EVVSPRX            call HandlerLoop    //EVVSPRX is thrown when VSP is open and data has arrived
+OnEvent  EVUARTRX           call HandlerLoop    //EVUARTRX  = data has arrived at the UART interface
 OnEvent  EVVSPTXEMPTY       call HandlerLoop
 OnEvent  EVUARTTXEMPTY      call HandlerLoop
 
-'//------------------------------------------------------------------------------
-'// Initialise Services and then wait for events
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Initialise Services and then wait for events
+//------------------------------------------------------------------------------
 if (AUTO_STARTUP & 1) != 0 then
   //Create Advert packets and register services
   OnStartup()
@@ -404,7 +417,7 @@ if (AUTO_STARTUP & 2) != 0 then
 endif
 
 
-'//Send user prompt for uart based command interface
+//Send user prompt for uart based command interface
 msg$="\n\r"
 UartMsg(msg$)
 msg$=DEVICENAME
@@ -412,6 +425,6 @@ UartMsg(msg$)
 msg$="\n\r"
 UartMsg(msg$)
 
-'//Send an OK response
+//Send an OK response
 UartRsp(0)
 

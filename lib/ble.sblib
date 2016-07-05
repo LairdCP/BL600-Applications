@@ -1,24 +1,37 @@
-'//******************************************************************************
-'// Laird Technologies (c) 2013
-'//
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'// ######                                                                #######
-'// ######        Library File meant to be #included in files             #######
-'// ######                                                                #######
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'//
-'// This library contains all the BLE related #defines that will make your app
-'// more readable
-'//
-'//******************************************************************************
+// Copyright (c) 2013, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// ######                                                                #######
+// ######        Library File meant to be #included in files             #######
+// ######                                                                #######
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// This library contains all the BLE related #defines that will make your app
+// more readable
+//
+//******************************************************************************
 
-'//******************************************************************************
-'// Library Import
-'//******************************************************************************
+//******************************************************************************
+// Library Import
+//******************************************************************************
 
-'//******************************************************************************
-'// Definitions
-'//******************************************************************************
+//******************************************************************************
+// Definitions
+//******************************************************************************
 
 #define BLE_CONN_HANDLE_INVALID                             0xFFFF
 #define BLE_INVALID_UUID_HANDLE                             0
@@ -26,8 +39,8 @@
 #define BLE_INVALID_SERVICE_HANDLE                          0
 #define CIRCBUFFER_INVALID_HANDLE                           -1
 
-'// Set BLE_DISCOVERABILITY_NONE if whitelist is enabled in BleAdvertStart()
-'// as the 4.0 spec says if whitelist is enabled then discoverability is not allowed
+//Set BLE_DISCOVERABILITY_NONE if whitelist is enabled in BleAdvertStart()
+//as the 4.0 spec says if whitelist is enabled then discoverability is not allowed
 #define BLE_DISCOVERABILITY_NONE                            0
 #define BLE_DISCOVERABILITY_LIMITED                         1
 #define BLE_DISCOVERABILITY_GENERAL                         2
@@ -103,7 +116,7 @@
 #define BLE_CHAR_PROPERTIES_RELIABLE_WRITE              0x80
 
 
-'// Body Sensor Location values
+//Body Sensor Location values
 #define BLE_HRS_BODY_SENSOR_LOCATION_OTHER              0
 #define BLE_HRS_BODY_SENSOR_LOCATION_CHEST              1
 #define BLE_HRS_BODY_SENSOR_LOCATION_WRIST              2
@@ -112,13 +125,13 @@
 #define BLE_HRS_BODY_SENSOR_LOCATION_EAR_LOBE           5
 #define BLE_HRS_BODY_SENSOR_LOCATION_FOOT               6
 
-'// types of advert packets
+//Types of advert packets
 #define ADV_IND                                         0
 #define ADV_DIRECT_IND                                  1
 #define ADV_SCAN_IND                                    2
 #define ADV_NONCONN_IND                                 3
 
-'// types of filter policy
+//Types of filter policy
 #define ADV_FILTERPOLICY_ANY                            0
 #define ADV_FILTERPOLICY_SCANREQ                        1
 #define ADV_FILTERPOLICY_CONNREQ                        2
@@ -126,31 +139,31 @@
 
 
 
-'//BLE EVENT MSG IDs
-#define BLE_EVBLEMSGID_CONNECT                          0 // msgCtx = connection handle
-#define BLE_EVBLEMSGID_DISCONNECT                       1 // msgCtx = connection handle
-#define BLE_EVBLEMSGID_IMMEDIATE_ALERT_SERVICE_ALERT    2 // msgCtx = alert level
-#define BLE_EVBLEMSGID_LINKLOSS_SERVICE_ALERT           3 // msgCtx = alert level
-#define BLE_EVBLEMSGID_SERVICE_ERROR                    4 // msgCtx = resultcode
-#define BLE_EVBLEMSGID_HTS_INDICATION_STATE             5 // msgCtx = new indication state 0=off, 1=on
-#define BLE_EVBLEMSGID_HTS_INDICATION_CNF               6 // msgCtx = not used
-#define BLE_EVBLEMSGID_BPS_INDICATION_STATE             7 // msgCtx = new indication state 0=off, 1=on
-#define BLE_EVBLEMSGID_BPS_INDICATION_CNF               8 // msgCtx = not used
-#define BLE_EVBLEMSGID_DISPLAY_PASSKEY                  9 // msgCtx = passcode to display
-#define BLE_EVBLEMSGID_NEW_BOND                        10 // msgCtx = connection handle
-#define BLE_EVBLEMSGID_AUTH_KEY_REQUEST                11 // msgCtx = 1 for passkey, 2 for 16 byte OOB data
-#define BLE_EVBLEMSGID_HRS_NOTIFICATION_STATE          12 // msgCtx = new notification state 0=off, 1=on
+//BLE EVENT MSG IDs
+#define BLE_EVBLEMSGID_CONNECT                          0 //msgCtx = connection handle
+#define BLE_EVBLEMSGID_DISCONNECT                       1 //msgCtx = connection handle
+#define BLE_EVBLEMSGID_IMMEDIATE_ALERT_SERVICE_ALERT    2 //msgCtx = alert level
+#define BLE_EVBLEMSGID_LINKLOSS_SERVICE_ALERT           3 //msgCtx = alert level
+#define BLE_EVBLEMSGID_SERVICE_ERROR                    4 //msgCtx = resultcode
+#define BLE_EVBLEMSGID_HTS_INDICATION_STATE             5 //msgCtx = new indication state 0=off, 1=on
+#define BLE_EVBLEMSGID_HTS_INDICATION_CNF               6 //msgCtx = not used
+#define BLE_EVBLEMSGID_BPS_INDICATION_STATE             7 //msgCtx = new indication state 0=off, 1=on
+#define BLE_EVBLEMSGID_BPS_INDICATION_CNF               8 //msgCtx = not used
+#define BLE_EVBLEMSGID_DISPLAY_PASSKEY                  9 //msgCtx = passcode to display
+#define BLE_EVBLEMSGID_NEW_BOND                        10 //msgCtx = connection handle
+#define BLE_EVBLEMSGID_AUTH_KEY_REQUEST                11 //msgCtx = 1 for passkey, 2 for 16 byte OOB data
+#define BLE_EVBLEMSGID_HRS_NOTIFICATION_STATE          12 //msgCtx = new notification state 0=off, 1=on
 //#define FUTURE_USE                                   13
-#define BLE_EVBLEMSGID_CONN_PARMS_UPDATE               14 // msgCtx = connection handle
-#define BLE_EVBLEMSGID_CONN_PARMS_UPDATE_FAIL          15 // msgCtx = connection handle
-#define BLE_EVBLEMSGID_CONN_TO_BONDED_MASTER           16 // msgCtx = connection handle
-#define BLE_EVBLEMSGID_UPDATED_BOND                    17 // msgCtx = connection handle
-#define BLE_EVBLEMSGID_ENCRYPTED                       18 // msgCtx = connection handle
-#define BLE_EVBLEMSGID_POWER_FAILURE_WARNING           19 // msgCtx = current supply voltage
-#define BLE_EVBLEMSGID_UNENCRYPTED                     20 // msgCtx = connection handle
-#define BLE_EVBLEMSGID_DEVICENAME_WRITE                21 // msgCtx = connection handle 
+#define BLE_EVBLEMSGID_CONN_PARMS_UPDATE               14 //msgCtx = connection handle
+#define BLE_EVBLEMSGID_CONN_PARMS_UPDATE_FAIL          15 //msgCtx = connection handle
+#define BLE_EVBLEMSGID_CONN_TO_BONDED_MASTER           16 //msgCtx = connection handle
+#define BLE_EVBLEMSGID_UPDATED_BOND                    17 //msgCtx = connection handle
+#define BLE_EVBLEMSGID_ENCRYPTED                       18 //msgCtx = connection handle
+#define BLE_EVBLEMSGID_POWER_FAILURE_WARNING           19 //msgCtx = current supply voltage
+#define BLE_EVBLEMSGID_UNENCRYPTED                     20 //msgCtx = connection handle
+#define BLE_EVBLEMSGID_DEVICENAME_WRITE                21 //msgCtx = connection handle 
 
-'//BLE Alert Levels
+//BLE Alert Levels
 #define BLE_ALERT_LEVEL_NO_ALERT                        0
 #define BLE_ALERT_LEVEL_MILD_ALERT                      1
 #define BLE_ALERT_LEVEL_HIGH_ALERT                      2
@@ -180,7 +193,7 @@
 #define BLE_IOCAPABILITY_ILLEGAL                        5
 
 
-// health thermometer sensor location
+//Health thermometer sensor location
 #define BLE_HTS_TEMP_TYPE_ARMPIT                        1
 #define BLE_HTS_TEMP_TYPE_BODY                          2
 #define BLE_HTS_TEMP_TYPE_EAR                           3
@@ -199,22 +212,18 @@
 //Some Useful Result Codes to help with documentation
 #define RESCODE_BLE_SVC_REGISTERED                      0x6018
 
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
 
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
 
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
 
-'//******************************************************************************
-'// Global Variable Declarations
-'//******************************************************************************
-
-'//******************************************************************************
-'// Function and Subroutine definitions
-'//******************************************************************************
-
-'//******************************************************************************
-'// Handler definitions
-'//******************************************************************************
-
-'//******************************************************************************
-'// Equivalent to main() in C
-'//******************************************************************************
-
+//******************************************************************************
+// Equivalent to main() in C
+//******************************************************************************

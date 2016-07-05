@@ -1,46 +1,59 @@
-'//******************************************************************************
-'// Laird Technologies (c) 2013
-'//
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'// ######                                                                #######
-'// ######        Library File meant to be #included in files             #######
-'// ######                                                                #######
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'//
-'// This library contains contains Health Thermomter Service and should be
-'// #included in your app.
-'//
-'//******************************************************************************
+// Copyright (c) 2013, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// ######                                                                #######
+// ######        Library File meant to be #included in files             #######
+// ######                                                                #######
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// This library contains contains Health Thermomter Service and should be
+// #included in your app.
+//
+//******************************************************************************
 
-'//******************************************************************************
-'// Definitions
-'//******************************************************************************
+//******************************************************************************
+// Definitions
+//******************************************************************************
 
 #define MAX_HTM_LEN         13
 
-'//******************************************************************************
-'// Library Import
-'//******************************************************************************
+//******************************************************************************
+// Library Import
+//******************************************************************************
 
-'//******************************************************************************
-'// Global Variable Declarations
-'//******************************************************************************
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
 
-dim shHts as integer        '//Service handle
-dim chHtsMeas as integer    '//Health Temperature Measurement Characteristic Handle
+dim shHts as integer        //Service handle
+dim chHtsMeas as integer    //Health Temperature Measurement Characteristic Handle
 
-dim indState                '//indication state 0 = off, 1 = on
-dim indwait                 '//0 means not waiting for an indication confirm
-dim tempMant                '//Temperature mantissa
-dim tempExp                 '//Termperature exponant
-dim fUnits                  '//Units -- 0 = Centigrade, 1 = Fahrenheit
-dim dateTime$ as string     '//Date Time string -- must be 0 or 7 bytes long
-dim hts$ as string          '//hts measurement attribute
-dim tmpType                 '//sensor location/type
+dim indState                //Indication state 0 = off, 1 = on
+dim indwait                 //0 means not waiting for an indication confirm
+dim tempMant                //Temperature mantissa
+dim tempExp                 //Termperature exponant
+dim fUnits                  //Units -- 0 = Centigrade, 1 = Fahrenheit
+dim dateTime$ as string     //Date Time string -- must be 0 or 7 bytes long
+dim hts$ as string          //hts measurement attribute
+dim tmpType                 //Sensor location/type
 
-'//******************************************************************************
-'// Initialisse Global Variable
-'//******************************************************************************
+//******************************************************************************
+// Initialisse Global Variable
+//******************************************************************************
 indwait         = 0
 indState        = 0
 
@@ -50,13 +63,13 @@ tempExp         = 0
 fUnits          = 0
 dateTime$       = ""
 
-'//******************************************************************************
-'// Function and Subroutine definitions
-'//******************************************************************************
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
 
-'//==============================================================================
-'// data to encode is in tempMant,tempExp,fUnits,dateTime$,tmpType
-'//==============================================================================
+//==============================================================================
+// data to encode is in tempMant,tempExp,fUnits,dateTime$,tmpType
+//==============================================================================
 sub HtsEncode()
   dim rc
   dim encsz
@@ -72,17 +85,17 @@ sub HtsEncode()
     //Units in fahrenheit
     flgs  = flgs | 0x01
   endif
-  //update if datetime present
+  //Update if datetime present
   if strlen(dateTime$) then
     flgs  = flgs | 0x02
-    encsz = encsz + 7  //encoded datetime is 7 bytes long
+    encsz = encsz + 7  //Encoded datetime is 7 bytes long
   endif
 
-  //create the attribute buffer space
+  //Create the attribute buffer space
   rc= StrFill(hts$,0,encsz)
   //Save the flags field
   rc = BleEncode8(hts$,flgs,0)
-  //save the health temperature info
+  //Save the health temperature info
   rc = BleEncodeFloat(hts$,tempMant,tempExp,1)
   ndx = 5
   //Save time stamp if present
@@ -90,13 +103,13 @@ sub HtsEncode()
     rc = BleEncodeTimeStamp(hts$,dateTime$,ndx)
     ndx = ndx+7
   endif
-  //save the temperature type
+  //Save the temperature type
   rc = BleEncode8(hts$,tmpType,ndx)
 
 endsub
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function AddCharHtsMeas() as integer
   dim rc
 
@@ -188,13 +201,13 @@ function AddCharHtsMeas() as integer
 endfunc rc
 
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function RegHtsService()
   dim rc
 
   //----------------------------------------------------------------------------
-  //Create a Health Thermometer PRIMARY service attribure which has a uuid of 0x1809
+  // Create a Health Thermometer PRIMARY service attribure which has a uuid of 0x1809
   //----------------------------------------------------------------------------
   rc = BleSvcCommit(BLE_SERVICE_PRIMARY,BleHandleUuid16(0x1809),shHts)
   AssertResCode(rc,9100)
@@ -207,18 +220,18 @@ function RegHtsService()
 
 endfunc rc
 
-'//==============================================================================
-'// snsloc is an integer as follows:-
-'//   1   Armpit
-'//   2   Body (General)
-'//   3   Ear (usually ear lobe)
-'//   4   Finger
-'//   5   Gastro intestinal tract
-'//   6   Mouth
-'//   7   Rectum
-'//   8   Toe
-'//   9   Tympanum (Ear Drum)
-'//==============================================================================
+//==============================================================================
+// snsloc is an integer as follows:-
+//   1   Armpit
+//   2   Body (General)
+//   3   Ear (usually ear lobe)
+//   4   Finger
+//   5   Gastro intestinal tract
+//   6   Mouth
+//   7   Rectum
+//   8   Toe
+//   9   Tympanum (Ear Drum)
+//==============================================================================
 sub InitHtsService(byval snsloc as integer)
   dim rc
 
@@ -232,9 +245,9 @@ sub InitHtsService(byval snsloc as integer)
 
 endsub
 
-'//==============================================================================
-'// will return 0 if successfully sent
-'//==============================================================================
+//==============================================================================
+// Will return 0 if successfully sent
+//==============================================================================
 function SendThermData() as integer
   dim rc
   rc = 1
@@ -250,30 +263,28 @@ function SendThermData() as integer
 endfunc rc
 
 
-'//==============================================================================
-'// MUST be called from the CHARHVC message handler
-'//==============================================================================
+//==============================================================================
+// MUST be called from the CHARHVC message handler
+//==============================================================================
 sub HtsOnCharHvc()
   indwait = 0
 endsub
 
 
-'//==============================================================================
-'// MUST be called from the CHARCCCD message handler
-'//==============================================================================
+//==============================================================================
+// MUST be called from the CHARCCCD message handler
+//==============================================================================
 sub HtsOnCharCccd(BYVAL nVal AS INTEGER)
   indState = nVal
 endsub
 
 
-'//******************************************************************************
-'// Handler definitions
-'//******************************************************************************
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
 
 
-'//******************************************************************************
-'// Other initialisations
-'//******************************************************************************
-
-
+//******************************************************************************
+// Other initialisations
+//******************************************************************************
 

@@ -1,38 +1,51 @@
-'//******************************************************************************
-'// Laird Technologies (c) 2013
-'//
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'// +++++                                                                      ++
-'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
-'// +++++  which consists of all characters up to the first . and excluding it ++
-'// +++++                                                                      ++
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'//
-'// Proximity Profile
-'//
-'//   ####################################
-'//   #                                  #
-'//   #  Search for TODO to make changes #
-'//   #                                  #
-'//   ####################################
-'//
-'//******************************************************************************
+// Copyright (c) 2013, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// +++++                                                                      ++
+// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+// +++++  which consists of all characters up to the first . and excluding it ++
+// +++++                                                                      ++
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// Proximity Profile
+//
+//   ####################################
+//   #                                  #
+//   #  Search for TODO to make changes #
+//   #                                  #
+//   ####################################
+//
+//******************************************************************************
 
-'//******************************************************************************
-'// Definitions
-'//******************************************************************************
+//******************************************************************************
+// Definitions
+//******************************************************************************
 
         //This defines how the application startsup and is a bit mask.
         //Bit 0 == 1 then OnStartup() is called just before waitevent
         //Bit 1 == 1 then StartAds() is called just before waitevent
 #define AUTO_STARTUP                         3
 
-        '//Set this to 0 to disable all debugging messages
+        //Set this to 0 to disable all debugging messages
 #define ENABLE_DEBUG_PRINTS                  1
 
-        '//Initial alert level for Link Loss Service (Proximity Profile)
+        //Initial alert level for Link Loss Service (Proximity Profile)
 #define INIT_ALERT_LEVEL                     BLE_ALERT_LEVEL_NO_ALERT
-        '//Tx Power for the TX Service (Proximity Profile)
+        //Tx Power for the TX Service (Proximity Profile)
 #define TX_POWER_LEVEL                       4
 
 #define DEVICENAME                           "LAIRD_PRX"
@@ -66,88 +79,86 @@
 #define CHAR_CR                              13
 
 
-        '// Minimum acceptable connection interval (0.5 seconds)
+        //Minimum acceptable connection interval (0.5 seconds)
 #define MIN_CONN_INTERVAL                    80000
-        '// Maximum acceptable connection interval (1 second).
+        //Maximum acceptable connection interval (1 second).
 #define MAX_CONN_INTERVAL                    100000
-        '// Slave latency -- number of conn events that can be missed
-        '// Effective Conn interval will be (SLAVE_LATENCY+1)*ACTUAL_CONN_INTERVAL
+        //Slave latency -- number of conn events that can be missed
+        //Effective Conn interval will be (SLAVE_LATENCY+1)*ACTUAL_CONN_INTERVAL
 #define SLAVE_LATENCY                        2
-        '// Connection supervisory timeout (4 seconds) - max 32 seconds
+        //Connection supervisory timeout (4 seconds) - max 32 seconds
 #define CONN_SUP_TIMEOUT                     4000000
-        '//DiscoverableMode, set to BLE_DISCOVERABILITY_xxx
+        //DiscoverableMode, set to BLE_DISCOVERABILITY_xxx
 #define DISCOVERY_MODE                       BLE_DISCOVERABILITY_LIMITED
 #define MAX_DEVNAME_CHRS                     10
-        '//Set Appearance advertise 0 to suppress
+        //Set Appearance advertise 0 to suppress
 #define ADV_APPEARANCE                       1
-        '//Advertise interval
+        //Advertise interval
 #define ADV_INTERVAL_MS                      100
 #define ADV_INTERVAL_SLOW_MS                 2000
-        '//Advertise timeout
+        //Advertise timeout
 #define ADV_TIMEOUT_MS                       30000
 #define ADV_TIMEOUT_SLOW_MS                  30000
 
-        '//Whitelist Policy in Adverts
+        //Whitelist Policy in Adverts
 #define ADV_WHITELIST_FILTER_POLICY          ADV_FILTERPOLICY_ANY
 
-        '//Minimum long term key size in octets
+        //Minimum long term key size in octets
 #define MIN_LTK_SIZE                         8
-        '//Maximum long term key size in octets
+        //Maximum long term key size in octets
 #define MAX_LTK_SIZE                         16
 
-        '// Set this to non-zero to enable notiy on batt service
+        //Set this to non-zero to enable notiy on batt service
 #define BATT_NOTIFY                          0
 #define BATT_INIT_LEVEL_PERC                 100
 
-        '//This sets the pairing i/p capability using bonding
+        //This sets the pairing i/p capability using bonding
 #define PAIRING_IOCAPABILITY                 BLE_IOCAPABILITY_NONE
 
-        '//Connection Update Negotiation paramters
+        //Connection Update Negotiation paramters
 #define FIRST_CONN_PARAMS_UPDATE_DELAY       5000
 #define NEXT_CONN_PARAMS_UPDATE_DELAY        5000
 #define MAX_CONN_PARAMS_UPDATE_DELAY         15000
 
-        '//Whether to require bonding or not
+        //Whether to require bonding or not
 #define REQUIRE_BONDING                      1
 
-'//******************************************************************************
-'// Debugging resource as early as possible
-'//******************************************************************************
+//******************************************************************************
+// Debugging resource as early as possible
+//******************************************************************************
 
-'//******************************************************************************
-'// Library Import
-'//******************************************************************************
+//******************************************************************************
+// Library Import
+//******************************************************************************
 #include "lib\cli.proximity.custom.sblib"
 
-'//******************************************************************************
-'// Debugging resource after libs
-'//******************************************************************************
+//******************************************************************************
+// Debugging resource after libs
+//******************************************************************************
 
-'//******************************************************************************
-'// Global Variable Declarations
-'//******************************************************************************
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
 
-'//******************************************************************************
-'// Initialisse Global Variable
-'//******************************************************************************
+//******************************************************************************
+// Initialisse Global Variable
+//******************************************************************************
 
-'//******************************************************************************
-'// Function and Subroutine definitions
-'//******************************************************************************
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
 
-'//******************************************************************************
-'// Handler definitions
-'//******************************************************************************
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
 
-'//******************************************************************************
-'// Equivalent to main() in C
-'//******************************************************************************
+//******************************************************************************
+// Equivalent to main() in C
+//******************************************************************************
 
 
-'//------------------------------------------------------------------------------
-'// Wait for a synchronous event.
-'// An application can have multiple <WaitEvent> statements
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Wait for a synchronous event.
+// An application can have multiple <WaitEvent> statements
+//------------------------------------------------------------------------------
 WaitEvent
-
-

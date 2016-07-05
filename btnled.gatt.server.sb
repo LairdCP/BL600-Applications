@@ -1,53 +1,66 @@
-'//******************************************************************************
-'// Laird Technologies (c) 2014
-'//
-'// This is a sample app for demonstration purpose only
-'//
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'// +++++                                                                      ++
-'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
-'// +++++  which consists of all characters up to the first . and excluding it ++
-'// +++++                                                                      ++
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'//
-'// BleLedDemo.sb
-'//  -- Created to demonstrating the following:
-'//     - Press a button on the BL600 dev board and it lights an LED on the BL620 dev board.
-'//     - Press a button on the BL620 dev board and it lights an LED on the BL600 dev board
-'//
-'// Values: 0x00  -> Both LEDs off
-'//         0x01  -> LED 0 on, LED 1 off
-'//         0x02  -> LED 1 on, LED 0 off
-'//         0x03  -> Both LEDs on
-'//
-'//   ####################################
-'//   #                                  #
-'//   #  Search for TODO to make changes #
-'//   #                                  #
-'//   ####################################
-'//
-'//******************************************************************************
+// Copyright (c) 2014, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// This is a sample app for demonstration purpose only
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// +++++                                                                      ++
+// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+// +++++  which consists of all characters up to the first . and excluding it ++
+// +++++                                                                      ++
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// BleLedDemo.sb
+//  -- Created to demonstrating the following:
+//     - Press a button on the BL600 dev board and it lights an LED on the BL620 dev board.
+//     - Press a button on the BL620 dev board and it lights an LED on the BL600 dev board
+//
+// Values: 0x00  -> Both LEDs off
+//         0x01  -> LED 0 on, LED 1 off
+//         0x02  -> LED 1 on, LED 0 off
+//         0x03  -> Both LEDs on
+//
+//   ####################################
+//   #                                  #
+//   #  Search for TODO to make changes #
+//   #                                  #
+//   ####################################
+//
+//******************************************************************************
 
 
-'//******************************************************************************
-'// Definitions
-'//******************************************************************************
+//******************************************************************************
+// Definitions
+//******************************************************************************
 #define ENABLE_DEBUG_PRINTS                  1
 
-        '// Laird Technologies 128 bit Base UUID
+        //Laird Technologies 128 bit Base UUID
 #define LT_BASE_UUID                         "\56\9a\00\00\b8\7f\49\0c\92\cb\11\ba\5e\a5\16\7c\"
-        '// Button Led Service 16 bit UUID
+        //Button Led Service 16 bit UUID
 #define LED_SVC_UUID                         0x1902
 
-        '// GATT Client (e.g. BL620) LED Controller Characteristic UUID
+        //GATT Client (e.g. BL620) LED Controller Characteristic UUID
 #define CLILEDS_CHAR_UUID                    0x2030
-        '// GATT Server (e.g. BL600) LED Controller Characteristic UUID
+        //GATT Server (e.g. BL600) LED Controller Characteristic UUID
 #define SERLEDS_CHAR_UUID                    0x2031
 
 
-        '//will advertise this name
+        //Will advertise this name
 #define DEVICENAME                           "Laird Btn LED Demo - BL600"       
-        '//version of this app in Device Info Service
+        //Version of this app in Device Info Service
 #define SWREV                               "1.0"
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -63,7 +76,7 @@
 //Can ignore the rest of the following #defines for now
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #define DEVICENAME_WRITABLE                   1
-       '//BLE_APPEARANCE_GENERIC_TAG
+       //BLE_APPEARANCE_GENERIC_TAG
 #define APPEARANCE                           512 
 #define MANF_NAME                            "Laird Technologies"
 #define MODELSTR                             "BL600"
@@ -71,28 +84,28 @@
 #define HWREV                                "HwRev1.0"
 
 #define MAX_DEVNAME_CHRS_IN_ADVERT             0
-        '//DiscoverableMode (2==General)
+        //DiscoverableMode (2==General)
 #define DISCOVERY_MODE                       2
-        '//Advertise type (0==Connectable, 2==Not Connectable)
+        //Advertise type (0==Connectable, 2==Not Connectable)
 #define ADVERT_TYPE                          0
-        '//Advertising interval -- higher the number, lower the current consumption
-        '//recommended range 50 to 10000 
+        //Advertising interval -- higher the number, lower the current consumption
+        //Recommended range 50 to 10000 
 #define ADV_INTERVAL_MS                      250
-        '//Advertise timeout (0==forever)
+        //Advertise timeout (0==forever)
 #define ADV_TIMEOUT_MS                       0
 
-        '// Minimum acceptable connection interval (0.5 seconds)
+        //Minimum acceptable connection interval (0.5 seconds)
 #define MIN_CONN_INTERVAL                    7500
-        '// Maximum acceptable connection interval (1 second).
+        //Maximum acceptable connection interval (1 second).
 #define MAX_CONN_INTERVAL                    100000
-        '// Slave latency -- number of conn events that can be missed
-        '// Effective Conn interval will be (SLAVE_LATENCY+1)*ACTUAL_CONN_INTERVAL
+        //Slave latency -- number of conn events that can be missed
+        //Effective Conn interval will be (SLAVE_LATENCY+1)*ACTUAL_CONN_INTERVAL
 #define SLAVE_LATENCY                        0
-        '// Connection supervisory timeout (4 seconds) - max 32 seconds
+        //Connection supervisory timeout (4 seconds) - max 32 seconds
 #define CONN_SUP_TIMEOUT                     4000000
-        '//DiscoverableMode
+        //DiscoverableMode
 #define DISCOVERY_MODE                       2
-        '//EvBleMsg ID for a BLE disconnection event
+        //EvBleMsg ID for a BLE disconnection event
 #define BLE_DISCONNECTED                     1
 
 
@@ -110,36 +123,35 @@ endsub
 onerror next HandlerOnErr
 
 
-'//******************************************************************************
-'// Global Variable Declarations
-'//******************************************************************************
-dim rc           '//resultcode
-dim dn$          '//device name
-dim prAddr$      '//peer mac address (not required for this app) hence empty
-dim hSvc         '//Service handler
-dim hCliLeds     '//GATT Client LEDs characteristic handle
-dim hSerLeds     '//GATT Server LEDs characteristic handle
-dim hSvcUuid     '//Btn LED service UUID handle
-dim nTxBufs      '//Number of free tx buffers for notifications
-                
-'//******************************************************************************
-'// Initialise Global Variable
-'//******************************************************************************
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
+dim rc           //Resultcode
+dim dn$          //Device name
+dim prAddr$      //Peer mac address (not required for this app) hence empty
+dim hSvc         //Service handler
+dim hCliLeds     //GATT Client LEDs characteristic handle
+dim hSerLeds     //GATT Server LEDs characteristic handle
+dim hSvcUuid     //Btn LED service UUID handle
+dim nTxBufs      //Number of free tx buffers for notifications
+
+//******************************************************************************
+// Initialise Global Variable
+//******************************************************************************
 dn$=DEVICENAME
 prAddr$=""
 
 
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
 
-'//******************************************************************************
-'// Function and Subroutine definitions
-'//******************************************************************************
-
-'//------------------------------------------------------------------------------
-'// For debugging
-'// --- Format: ln=ABCD 
-'//     AB : Subroutine/Function number
-'//     CD : Result code number         
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// For debugging
+// --- Format: ln=ABCD 
+//     AB : Subroutine/Function number
+//     CD : Result code number         
+//------------------------------------------------------------------------------
 Sub AssertRC(rc,ln)  
     if rc!=0 then
         if (ENABLE_DEBUG_PRINTS!=0) then
@@ -149,9 +161,9 @@ Sub AssertRC(rc,ln)
 EndSub
 
 
-'//------------------------------------------------------------------------------
-'// Delay using a while loop
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Delay using a while loop
+//------------------------------------------------------------------------------
 Sub Delay(ms)
     dim i : i = GetTickCount()
     while GetTickSince(i)<ms
@@ -159,69 +171,69 @@ Sub Delay(ms)
 EndSub
 
 
-'//------------------------------------------------------------------------------
-'// Initialise service and characteristics
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Initialise service and characteristics
+//------------------------------------------------------------------------------
 Sub CreateSvc()
     dim bseUuid$ : bseUuid$=LT_BASE_UUID
-    '//Laird Technologies Base UUID handle
+    //Laird Technologies Base UUID handle
     dim hBseUuid : hBseUuid=BleHandleUuid128(bseUuid$)
-    '//LED service UUID handle
+    //LED service UUID handle
     hSvcUuid=BleHandleUuidSibling(hBseUuid,LED_SVC_UUID)
-    
+
     dim dta$ : dta$="\00"
     dim rc2,rc3
-    
-    '//Create Btn LED Service
+
+    //Create Btn LED Service
     rc=BleServiceNew(1,hSvcUuid,hSvc)
     AssertRC(rc,0600)
-    
-    '//Initialise GATT Client LEDs Characteristic - Notifyable, Readable 
+
+    //Initialise GATT Client LEDs Characteristic - Notifyable, Readable
     rc=BleCharNew(0x22, BleHandleUuidSibling(hBseUuid,(CLILEDS_CHAR_UUID)), BleAttrMetaData(1,0,2,1,rc2), BleAttrMetaData(1,1,1,1,rc3),0)
     AssertRC(rc,155) : AssertRC(rc2,1552)
     rc=BleCharCommit(hSvc,dta$,hCliLeds)
     AssertRC(rc,157)
-    
-    '//Initialise GATT Server LEDs Characteristic - Read/Write 
+
+    //Initialise GATT Server LEDs Characteristic - Read/Write
     rc=BleCharNew(0x0A, BleHandleUuidSibling(hBseUuid,(SERLEDS_CHAR_UUID)), BleAttrMetaData(1,1,2,1,rc2),0,0)
     AssertRC(rc,0603) : AssertRC(rc2,0601) : AssertRC(rc3,0601)
     rc=BleCharCommit(hSvc,dta$,hSerLeds)
     AssertRC(rc,0604)
-    
-    '//Commit service to the GATT table
+
+    //Commit service to the GATT table
     rc=BleServiceCommit(hSvc)  
 EndSub
 
 
-'//------------------------------------------------------------------------------
-'// Initialise advert reports
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Initialise advert reports
+//------------------------------------------------------------------------------
 Sub MakeAdvRpts()
     dim advRpt$, scnRpt$
-    
-    '//Initialise the advert report
+
+    //Initialise the advert report
     rc = BleAdvRptInit(advRpt$, 2, 0, 0)
     AssertRC(rc,0703)   
-    
-    '//initialise scan report
+
+    //Initialise scan report
     rc=BleScanRptInit(scnRpt$)
-    
-    '//Add local name to scan report
+
+    //Add local name to scan report
     rc=BleAdvRptAppendAD(scnRpt$,0x09,dn$)
     AssertRC(rc,179)
-    
-    '//Add led svc uuid to advert report
+
+    //Add led svc uuid to advert report
     rc=BleAdvRptAddUuid128(advRpt$, hSvcUuid)
-     
-    '//Commit the reports to stack
+
+    //Commit the reports to stack
     rc = BleAdvRptsCommit(advRpt$,scnRpt$)
     AssertRC(rc,0900)
 EndSub
 
       
-'//------------------------------------------------------------------------------
-'// Start advertising
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Start advertising
+//------------------------------------------------------------------------------
 Sub StartAdvertising()
     rc = BleAdvertStart(ADVERT_TYPE, prAddr$, ADV_INTERVAL_MS, ADV_TIMEOUT_MS,0)
     AssertRC(rc,197)
@@ -229,25 +241,25 @@ Sub StartAdvertising()
 EndSub
 
 
-'//------------------------------------------------------------------------------
-'// Initialise GPIOS
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Initialise GPIOS
+//------------------------------------------------------------------------------
 Sub InitGpios()
-    rc=gpiosetfunc(GPIO_BTN0,1,2)             //button 0 digital input with weak pull up resistor
+    rc=gpiosetfunc(GPIO_BTN0,1,2)             //Button 0 digital input with weak pull up resistor
     AssertRC(rc,188)
-    rc=gpiosetfunc(GPIO_BTN1,1,2)             //button 1 digital input with weak pull up resistor
+    rc=gpiosetfunc(GPIO_BTN1,1,2)             //Button 1 digital input with weak pull up resistor
     AssertRC(rc,188)
-    rc=GpioSetFunc(GPIO_LED0,2,0)             //sets sio18 (LED0) as a digital out
+    rc=GpioSetFunc(GPIO_LED0,2,0)             //Sets sio18 (LED0) as a digital out
     AssertRC(rc,190)
     GpioWrite(GPIO_LED0,0)
-    rc=GpioSetFunc(GPIO_LED1,2,0)             //sets sio19 (LED1) as a digital out
+    rc=GpioSetFunc(GPIO_LED1,2,0)             //Sets sio19 (LED1) as a digital out
     AssertRC(rc,192)
     GpioWrite(GPIO_LED1,0)
 EndSub
 
-      
-'//------------------------------------------------------------------------------
-'//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 Sub OnStartup()
     print "\n\n*****************************************************************************************"
     print "\n** BleLedDemo.sb **\n"
@@ -259,44 +271,44 @@ Sub OnStartup()
     print "\n    * e.g. 0x11 turns both LEDs on, 0x10 turns on LED 0 and turns off LED 1\n**"
     print "\n*****************************************************************************************"
     print "\n*****************************************************************************************\n"
-    
+
     CreateSvc()
-   
-    '//Initialise the Gap Service
+
+    //Initialise the Gap Service
     rc=BleGapSvcInit(dn$,DEVICENAME_WRITABLE,APPEARANCE,MIN_CONN_INTERVAL,MAX_CONN_INTERVAL,CONN_SUP_TIMEOUT,SLAVE_LATENCY)
     AssertRC(rc,234)
-    
+
     MakeAdvRpts()
-    
+
     InitGpios()  
-    
+
     StartAdvertising()   
 EndSub
 
 
-'//******************************************************************************
-'// Handler definitions
-'//******************************************************************************
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
 
-'//------------------------------------------------------------------------------
-'// New Characteristic value
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// New Characteristic value
+//------------------------------------------------------------------------------
 Function HndlrCharVal(charHndl, offset, len)  
     dim i,s$
-    
+
     //Get characteristic value
     rc=BleCharValueRead(charHndl, s$)
-	print "\nNew value received from client:";s$
-    
+    print "\nNew value received from client:";s$
+
     //write values to LEDs
     GpioWrite(GPIO_LED0,StrGetChr(s$,0))
     GpioWrite(GPIO_LED1,StrGetChr(s$,1))
 EndFunc 1
 
 
-'//------------------------------------------------------------------------------
-'// Ble event handler
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Ble event handler
+//------------------------------------------------------------------------------
 Function HndlrBleMsg(ByVal nMsgId, ByVal connHndl)
     if nMsgID==1 then
         print "\n\n-- Disconnected from client\n"
@@ -306,21 +318,21 @@ Function HndlrBleMsg(ByVal nMsgId, ByVal connHndl)
 EndFunc 1
 
 
-'//------------------------------------------------------------------------------
-'// Button 0 transition handler
-'//------------------------------------------------------------------------------
-Function HndlrGpio()  
+//------------------------------------------------------------------------------
+// Button 0 transition handler
+//------------------------------------------------------------------------------
+Function HndlrGpio()
     OnEvent EvGpioChan0 disable
     OnEvent EvGpioChan1 disable
-    
+
     Delay(150)
-    
+
     dim val$
     rc=StrSetChr(val$, !GpioRead(GPIO_BTN1), 1)
     AssertRC(rc,1203)
     rc=StrSetChr(val$, !GpioRead(GPIO_BTN0), 0)
     AssertRC(rc,1203)
-    
+
     print "\n server button update:";val$
 
     if nTxBufs > 0 then
@@ -330,23 +342,22 @@ Function HndlrGpio()
         AssertRC(rc,1203)
         nTxBufs = nTxBufs-1
     endif
-    
+
     OnEvent EvGpioChan0 call HndlrGpio
     OnEvent EvGpioChan1 call HndlrGpio
 EndFunc 1 
 
 
-
-'//------------------------------------------------------------------------------
-'// CCCD written
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// CCCD written
+//------------------------------------------------------------------------------
 Function HndlrCccd(charHndl, val)  
     if charHndl == hCliLeds then
         print "\n CCCD:";val
         if val==2 then
-            rc=GpioBindEvent(0,GPIO_BTN0,2)         //binds a gpio transition high or low on button 0 (SIO16) to event 0
+            rc=GpioBindEvent(0,GPIO_BTN0,2)         //Binds a gpio transition high or low on button 0 (SIO16) to event 0
             AssertRC(rc,309)
-            rc=GpioBindEvent(1,GPIO_BTN1,2)         //binds a gpio transition high or low on button 1 (SIO17) to event 1
+            rc=GpioBindEvent(1,GPIO_BTN1,2)         //Binds a gpio transition high or low on button 1 (SIO17) to event 1
             AssertRC(rc,311)
             print "\n Indications enabled"
             nTxBufs = nTxBufs + 1
@@ -358,39 +369,36 @@ Function HndlrCccd(charHndl, val)
     endif
 EndFunc 1
 
-'//------------------------------------------------------------------------------
-'// Disconnection 
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Disconnection 
+//------------------------------------------------------------------------------
 Function HndlrDiscon(hConn, rsn)
     StartAdvertising()
 EndFunc 1
-    
-    
-'//------------------------------------------------------------------------------
-'// Called when indicate ack'd
-'//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+// Called when indicate ack'd
+//------------------------------------------------------------------------------
 Function HndlrCharHvc(hChar)
     nTxBufs = nTxBufs + 1
 EndFunc 1
 
-'//******************************************************************************
-'// Equivalent to main() in C
-'//******************************************************************************
+//******************************************************************************
+// Equivalent to main() in C
+//******************************************************************************
 OnStartup()
 
 OnEvent EvCharVal    call HndlrCharVal
 OnEvent EvBleMsg     call HndlrBleMsg
 OnEvent EvCharCccd   call HndlrCccd
-OnEvent EvGpioChan0 call HndlrGpio
-OnEvent EvGpioChan1 call HndlrGpio
-OnEvent EvDiscon    call HndlrDiscon
-OnEvent EvCharHvc   call HndlrCharHvc
+OnEvent EvGpioChan0  call HndlrGpio
+OnEvent EvGpioChan1  call HndlrGpio
+OnEvent EvDiscon     call HndlrDiscon
+OnEvent EvCharHvc    call HndlrCharHvc
 
-
-'//------------------------------------------------------------------------------
-'// Wait for a synchronous event.
-'// An application can have multiple <WaitEvent> statements
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Wait for a synchronous event.
+// An application can have multiple <WaitEvent> statements
+//------------------------------------------------------------------------------
 WaitEvent
-
-

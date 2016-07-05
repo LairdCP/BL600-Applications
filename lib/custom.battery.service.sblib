@@ -1,48 +1,61 @@
-'//******************************************************************************
-'// Laird Technologies (c) 2013
-'//
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'// ######                                                                #######
-'// ######        Library File meant to be #included in files             #######
-'// ######                                                                #######
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'//
-'// This library contains contains the battery service manager and should be
-'// #included in your app
-'//
-'//******************************************************************************
+// Copyright (c) 2013, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// ######                                                                #######
+// ######        Library File meant to be #included in files             #######
+// ######                                                                #######
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// This library contains contains the battery service manager and should be
+// #included in your app
+//
+//******************************************************************************
 
-'//******************************************************************************
-'// Definitions
-'//******************************************************************************
+//******************************************************************************
+// Definitions
+//******************************************************************************
 
-'//******************************************************************************
-'// Library Import
-'//******************************************************************************
+//******************************************************************************
+// Library Import
+//******************************************************************************
 
-'//******************************************************************************
-'// Global Variable Declarations
-'//******************************************************************************
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
 
 dim shBat as integer
 dim chBatlvl as integer
 dim batlvl$ as string
 
 
-'//******************************************************************************
-'// Initialise Global Variable
-'//******************************************************************************
+//******************************************************************************
+// Initialise Global Variable
+//******************************************************************************
 
 shBat = 0
 chBatlvl = 0
 batlvl$ ="\64"
 
-'//******************************************************************************
-'// Function and Subroutine definitions
-'//******************************************************************************
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function AddCharBatLevel(byval btlvl as integer, byval fNfy as integer) as integer
   dim rc
 
@@ -59,10 +72,10 @@ function AddCharBatLevel(byval btlvl as integer, byval fNfy as integer) as integ
   dim mdCccd
   dim mdSccd
   dim chProp 
-  dim format : format = 0x04            // uint8 - unsigned 8-bit integer
+  dim format : format = 0x04            //uint8 - Unsigned 8-bit integer
   dim exponent : exponent = 0
-  dim unit : unit = 0x27AD              // percentage
-  dim namespace : namespace = 0x01      // Bluetooth SIG
+  dim unit : unit = 0x27AD              //Percentage
+  dim namespace : namespace = 0x01      //Bluetooth SIG
   dim namespacedesc : namespacedesc = 0
   //dim attr$
 
@@ -137,13 +150,13 @@ function AddCharBatLevel(byval btlvl as integer, byval fNfy as integer) as integ
 endfunc rc
 
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function RegBatService(byval btlvl as integer, byval fNfy as integer) as integer
   dim rc
 
   //----------------------------------------------------------------------------
-  //Create a battery PRIMARY service attribute which has a uuid of 0x180F
+  // Create a battery PRIMARY service attribute which has a uuid of 0x180F
   //----------------------------------------------------------------------------
   rc = BleServiceNew(BLE_SERVICE_PRIMARY,BleHandleUuid16(0x180F),shBat)
   AssertResCode(rc,9100)
@@ -163,8 +176,8 @@ function RegBatService(byval btlvl as integer, byval fNfy as integer) as integer
 endfunc rc
 
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 sub InitBatService(byval batlvl as integer, byval fNfy as integer)
   dim rc
 
@@ -176,8 +189,8 @@ sub InitBatService(byval batlvl as integer, byval fNfy as integer)
 endsub
 
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function VerifyBattLevel(battLvl)
   if battLvl < 0 then
     battLvl = 0
@@ -187,8 +200,8 @@ function VerifyBattLevel(battLvl)
 endfunc battLvl  
 
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function SetBattLevel(btLvl as integer) as integer
   dim rc
 
@@ -201,8 +214,8 @@ function SetBattLevel(btLvl as integer) as integer
 endfunc rc
 
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function NotifyBattLevel(btLvl as integer) as integer
   dim rc
 
@@ -214,13 +227,11 @@ function NotifyBattLevel(btLvl as integer) as integer
 
 endfunc rc
 
-'//******************************************************************************
-'// Handler definitions
-'//******************************************************************************
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
 
-'//******************************************************************************
-'// Other initialisations
-'//******************************************************************************
-
-
+//******************************************************************************
+// Other initialisations
+//******************************************************************************
 

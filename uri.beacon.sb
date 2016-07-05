@@ -1,35 +1,48 @@
-'//******************************************************************************
-'// Laird Technologies (c) 2015
-'//
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'// +++++                                                                      ++
-'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
-'// +++++  which consists of all characters up to the first . and excluding it ++
-'// +++++                                                                      ++
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'//
-'// This creates a URIBeacon advertising a link to the Laird Tech website
-'// Complies with the URIBeacon advertising specification:
-'// https://github.com/google/uribeacon/blob/master/specification/AdvertisingMode.md
-'//
-'//******************************************************************************
+// Copyright (c) 2015, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// +++++                                                                      ++
+// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+// +++++  which consists of all characters up to the first . and excluding it ++
+// +++++                                                                      ++
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// This creates a URIBeacon advertising a link to the Laird Tech website
+// Complies with the URIBeacon advertising specification:
+// https://github.com/google/uribeacon/blob/master/specification/AdvertisingMode.md
+//
+//******************************************************************************
 
-'//******************************************************************************
-'// Definitions
-'//******************************************************************************
-#define ADVERT_INTERVAL 200 //Advertising interval (ms)
-#define ADVERT_TIMEOUT 60000 //Advertising timeout (s)
-#define RESTART_ADVERTISING 1 //If set to 1, will restart advertising when it times out, otherwise sits idle
-#define TXPOWER -4 //Desired transmit power level (dBm)
-#define FLAGS 0 //Set to 1 to advertise with a hidden hint, otherwise leave as 0
+//******************************************************************************
+// Definitions
+//******************************************************************************
+#define ADVERT_INTERVAL     200    //Advertising interval (ms)
+#define ADVERT_TIMEOUT      60000  //Advertising timeout (s)
+#define RESTART_ADVERTISING 1      //If set to 1, will restart advertising when it times out, otherwise sits idle
+#define TXPOWER             -4     //Desired transmit power level (dBm)
+#define FLAGS               0      //Set to 1 to advertise with a hidden hint, otherwise leave as 0
 
-'//******************************************************************************
-'// Library Import
-'//******************************************************************************
+//******************************************************************************
+// Library Import
+//******************************************************************************
 
-'//******************************************************************************
-'// Global Variable Declarations
-'//******************************************************************************
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
 // Prefix of URL:
 // 0x00 : http://www.
 // 0x01 : https://www.
@@ -58,9 +71,9 @@ dim Url$ : Url$ = "lairdtech\00"
 //Result code and service ID
 dim rc, svcID
 
-'//******************************************************************************
-'// Function and Subroutine definitions
-'//******************************************************************************
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
 SUB AssertRC(rc, tag)
     if (rc != 0) then
         print "Error, rc = ";integer.h'rc;" at tag ";tag;"\n"
@@ -73,25 +86,25 @@ FUNCTION SetupAdverts()
     advRpt$ = ""
     scanRpt$ = ""
     Dat$ = ""
-    rc = BleEncode16(Dat$, 0xFED8, 0) //Service ID
+    rc = BleEncode16(Dat$, 0xFED8, 0)                             //Service ID
     AssertRC(rc, 1)
-    rc = BleEncode8(Dat$, FLAGS, 2) //Flags
+    rc = BleEncode8(Dat$, FLAGS, 2)                               //Flags
     AssertRC(rc, 2)
-    rc = BleEncode8(Dat$, SYSINFO(2008), 3) //TX Power
+    rc = BleEncode8(Dat$, SYSINFO(2008), 3)                       //TX Power
     AssertRC(rc, 3)
-    rc = BleEncode8(Dat$, UrlType, 4) //URL prefix
+    rc = BleEncode8(Dat$, UrlType, 4)                             //URL prefix
     AssertRC(rc, 4)
-    rc = BleEncodeString(Dat$, 5, Url$, 0, strlen(Url$)) //URL
+    rc = BleEncodeString(Dat$, 5, Url$, 0, strlen(Url$))          //URL
     AssertRC(rc, 5)
-    rc = BLEADVRPTINIT(advRpt$, 0, 0, 0) //Not connectable
+    rc = BLEADVRPTINIT(advRpt$, 0, 0, 0)                          //Not connectable
     AssertRC(rc, 6)
     rc = BLESCANRPTINIT(scanRpt$)
     AssertRC(rc, 7)
-    rc = BLEADVRPTADDUUID16(advRpt$, 0xFED8, -1, -1, -1, -1, -1) //Add service to advert report
+    rc = BLEADVRPTADDUUID16(advRpt$, 0xFED8, -1, -1, -1, -1, -1)  //Add service to advert report
     AssertRC(rc, 8)
-    rc = BLEADVRPTAPPENDAD(advRpt$, 0x16, Dat$) //Add URIBeacon data to advert report
+    rc = BLEADVRPTAPPENDAD(advRpt$, 0x16, Dat$)                   //Add URIBeacon data to advert report
     AssertRC(rc, 9)
-    rc = BLEADVRPTSCOMMIT(advRpt$, scanRpt$) //Save advert data
+    rc = BLEADVRPTSCOMMIT(advRpt$, scanRpt$)                      //Save advert data
     AssertRC(rc, 10)
 ENDFUNC 1
 
@@ -110,14 +123,14 @@ FUNCTION HndlrAdvTimeout()
     ENDIF
 ENDFUNC 1
 
-'//******************************************************************************
-'// Handler definitions
-'//******************************************************************************
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
 ONEVENT  EVBLE_ADV_TIMEOUT  CALL HndlrAdvTimeout
 
-'//******************************************************************************
-'// Equivalent to main() in C
-'//******************************************************************************
+//******************************************************************************
+// Equivalent to main() in C
+//******************************************************************************
 //Create service
 rc = BleServiceNew(1, BleHandleUuid16(0xFED8), svcID)
 AssertRC(rc, 12)
@@ -132,8 +145,8 @@ AssertRC(rc, 14)
 rc = SetupAdverts()
 rc = StartAdverts()
 
-'//------------------------------------------------------------------------------
-'// Wait for a synchronous event.
-'// An application can have multiple <WaitEvent> statements
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Wait for a synchronous event.
+// An application can have multiple <WaitEvent> statements
+//------------------------------------------------------------------------------
 WAITEVENT

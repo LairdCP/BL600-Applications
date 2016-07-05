@@ -1,42 +1,55 @@
-'//******************************************************************************
-'// Laird Technologies (c) 2013
-'//
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'// +++++                                                                      ++
-'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
-'// +++++  which consists of all characters up to the first . and excluding it ++
-'// +++++                                                                      ++
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'//
-'// BL600 Module running in dev kit.
-'//
-'// This demo app shows how to enter deep sleep on pressing button 0 and then
-'// remain in deep sleep until it is released.
-'// 
-'// The app prints "On Start" when it comes out of reset and then in prints 
-'// "\nI am awake nn" while not in deep sleep with the aid of a 
-'// recurring 1 second timer. nn is the number of seconds it has been alive.
-'//
-'// Recovery from deep sleep is via the reset vector so this app will 
-'// automatically restart because the app will be saved as $autorun$
-'//
-'// Button 0 is on SIO16 and please note that none of the SIO pins have any
-'// pullup or pulldown resistors and so if the internal pullup in SIO16 is not
-'// enabled then on unpressing the button signal SIO16 will float which means
-'// it will enentually wake. Place a pullup to improve the timing or use the
-'// internal pullup by using the line
-'//    rc = GpioSetFunc(SIONUM_TO_SLEEP_ON,1,0x22)
-'// in function HandlerChan0() -- the 3rd parmater is 0x22 instead of 0x20
-'// to enable the internal pullup
-'//
-'//
-'// This has been tested on firmare version on ..
-'//   1.3.57.0   rev3 devkit board
-'//==============================================================================
+// Copyright (c) 2013, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// +++++                                                                      ++
+// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+// +++++  which consists of all characters up to the first . and excluding it ++
+// +++++                                                                      ++
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// BL600 Module running in dev kit.
+//
+// This demo app shows how to enter deep sleep on pressing button 0 and then
+// remain in deep sleep until it is released.
+// 
+// The app prints "On Start" when it comes out of reset and then in prints 
+// "\nI am awake nn" while not in deep sleep with the aid of a 
+// recurring 1 second timer. nn is the number of seconds it has been alive.
+//
+// Recovery from deep sleep is via the reset vector so this app will 
+// automatically restart because the app will be saved as $autorun$
+//
+// Button 0 is on SIO16 and please note that none of the SIO pins have any
+// pullup or pulldown resistors and so if the internal pullup in SIO16 is not
+// enabled then on unpressing the button signal SIO16 will float which means
+// it will enentually wake. Place a pullup to improve the timing or use the
+// internal pullup by using the line
+//    rc = GpioSetFunc(SIONUM_TO_SLEEP_ON,1,0x22)
+// in function HandlerChan0() -- the 3rd parmater is 0x22 instead of 0x20
+// to enable the internal pullup
+//
+//
+// This has been tested on firmare version on ..
+//   1.3.57.0   rev3 devkit board
+//==============================================================================
 
-'//******************************************************************************
-'// Definitions
-'//******************************************************************************
+//******************************************************************************
+// Definitions
+//******************************************************************************
 
 #define SIONUM_TO_SLEEP_ON              (16)
 #define GPIOFUNC_INPUT                  (1)
@@ -44,32 +57,32 @@
 
 #define GPIOBINDCHANNELNUM              (0)
 
-'//******************************************************************************
-'// Debugging resource as early as possible
-'//******************************************************************************
+//******************************************************************************
+// Debugging resource as early as possible
+//******************************************************************************
 
-'//******************************************************************************
-'// Library Import
-'//******************************************************************************
+//******************************************************************************
+// Library Import
+//******************************************************************************
 
-'//******************************************************************************
-'// Debugging resource after libs
-'//******************************************************************************
+//******************************************************************************
+// Debugging resource after libs
+//******************************************************************************
 
-'//******************************************************************************
-'// Global Variable Declarations
-'//******************************************************************************
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
 DIM rc AS INTEGER         //for storing resultcode from various functions
 DIM cnt AS INTEGER
 
-'//******************************************************************************
-'// Initialisse Global Variable
-'//******************************************************************************
+//******************************************************************************
+// Initialisse Global Variable
+//******************************************************************************
 cnt=0
 
-'//******************************************************************************
-'// Function and Subroutine definitions
-'//******************************************************************************
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
 
 SUB AssertRC(r,t)
   IF rc!=0 THEN
@@ -77,22 +90,22 @@ SUB AssertRC(r,t)
   ENDIF
 ENDSUB
 
-'//******************************************************************************
-'// Handler definitions
-'//******************************************************************************
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
 
 
-'//==============================================================================
-'// This handler is called when timer 0 expires
-'//==============================================================================
+//==============================================================================
+// This handler is called when timer 0 expires
+//==============================================================================
 FUNCTION HandlerTimer0()
   cnt=cnt+1
   PRINT "\nI am awake ";cnt
 ENDFUNC 1
 
-'//==============================================================================
-'// This handler is called when pin SIONUM_TO_SLEEP_ON goes from hi to lo
-'//==============================================================================
+//==============================================================================
+// This handler is called when pin SIONUM_TO_SLEEP_ON goes from hi to lo
+//==============================================================================
 FUNCTION HandlerChan0()
   //unbind the channel as we are about to go to sleep
   rc = GpioUnBindEvent(GPIOBINDCHANNELNUM)
@@ -116,27 +129,27 @@ FUNCTION HandlerChan0()
   ENDIF  
 ENDFUNC 1
 
-'//******************************************************************************
-'// Equivalent to main() in C
-'//******************************************************************************
+//******************************************************************************
+// Equivalent to main() in C
+//******************************************************************************
 
-//register handler for timer 0
+//Register handler for timer 0
 ONEVENT EVTMR0        CALL HandlerTimer0
 ONEVENT EVGPIOCHAN0   call HandlerChan0
 
-//start timer 0 so that it recurs every second
+//Start timer 0 so that it recurs every second
 TimerStart(0,1000,1)
 
-//configure SIO16 as input with pullup and 
+//Configure SIO16 as input with pullup and 
 rc = GpioSetFunc(SIONUM_TO_SLEEP_ON, GPIOFUNC_INPUT, 2) : AssertRC( rc, 100)
 
-//detect a high to low transition on pin SIONUM_TO_SLEEP_ON
+//Detect a high to low transition on pin SIONUM_TO_SLEEP_ON
 rc = GpioBindEvent(GPIOBINDCHANNELNUM,SIONUM_TO_SLEEP_ON,1) : AssertRC( rc, 200)
 
 PRINT "\nOn Start"
 
-'//------------------------------------------------------------------------------
-'// Wait for a synchronous event.
-'// An application can have multiple <WaitEvent> statements
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Wait for a synchronous event.
+// An application can have multiple <WaitEvent> statements
+//------------------------------------------------------------------------------
 WaitEvent

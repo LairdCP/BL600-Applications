@@ -1,79 +1,92 @@
-'//******************************************************************************
-'// Laird Technologies (c) 2013
-'//
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'// ######                                                                #######
-'// ######        Library File meant to be #included in files             #######
-'// ######                                                                #######
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'//
-'// This library contains contains Heart Rate Service and should be
-'// #included in your app.
-'//
-'//   Usage: (also see sample hrs.heart.rate.sb for more details)
-'//
-'//     (*) Call LibInit(...) from your code
-'//           If you want the battery service to be installed, then provide
-'//           a valid value in the range 0 to 100 for the btlvl parameter
-'//     (*) You can start/stop adverts using StartAdverts(..) and StopAdverts()
-'//     (*) To cater for passkey challenges during pairing, you need to handle
-'//           the BLE_EVBLEMSGID_AUTH_KEY_REQUEST and BLE_EVBLEMSGID_DISPLAY_PASSKEY
-'//           messages in the EVBLEMSG handler
-'//     (*) When you get BLE_EVBLEMSGID_DISPLAY_PASSKEY, you need to display the
-'//           passcode so that it can be entered in the peer device.
-'//     (*) To submit a passkey call the function SendPassKey() with an integer value
-'//     (*) When adverts timeout, you need to perform appropriate actions in the
-'//            handler HandlerBlrAdvTimOut in your app.
-'//     (*) To send heart rate call SendHrData()
-'//     (*) To add heart rate interval call AddRrData()
-'//
-'//
-'//******************************************************************************
+// Copyright (c) 2013, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// ######                                                                #######
+// ######        Library File meant to be #included in files             #######
+// ######                                                                #######
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// This library contains contains Heart Rate Service and should be
+// #included in your app.
+//
+//   Usage: (also see sample hrs.heart.rate.sb for more details)
+//
+//     (*) Call LibInit(...) from your code
+//           If you want the battery service to be installed, then provide
+//           a valid value in the range 0 to 100 for the btlvl parameter
+//     (*) You can start/stop adverts using StartAdverts(..) and StopAdverts()
+//     (*) To cater for passkey challenges during pairing, you need to handle
+//           the BLE_EVBLEMSGID_AUTH_KEY_REQUEST and BLE_EVBLEMSGID_DISPLAY_PASSKEY
+//           messages in the EVBLEMSG handler
+//     (*) When you get BLE_EVBLEMSGID_DISPLAY_PASSKEY, you need to display the
+//           passcode so that it can be entered in the peer device.
+//     (*) To submit a passkey call the function SendPassKey() with an integer value
+//     (*) When adverts timeout, you need to perform appropriate actions in the
+//            handler HandlerBlrAdvTimOut in your app.
+//     (*) To send heart rate call SendHrData()
+//     (*) To add heart rate interval call AddRrData()
+//
+//
+//******************************************************************************
 
-'//******************************************************************************
-'// Definitions
-'//******************************************************************************
+//******************************************************************************
+// Definitions
+//******************************************************************************
 
 #define RR_RING_BUFFER_SIZE                9
 #define MAX_HRM_LEN                        20
 
-'//******************************************************************************
-'// Library Import
-'//******************************************************************************
+//******************************************************************************
+// Library Import
+//******************************************************************************
 
-'//******************************************************************************
-'// Global Variable Declarations
-'//******************************************************************************
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
 
-dim shHrs as integer        '//Service handle
-dim chHrsMeas as integer    '//Heart Rate Measurement Characteristic Handle
-dim chHrsLoc as integer     '//Heart Rate Sensor Location Handle
+dim shHrs as integer        //Service handle
+dim chHrsMeas as integer    //Heart Rate Measurement Characteristic Handle
+dim chHrsLoc as integer     //Heart Rate Sensor Location Handle
 
-dim hrtRate                 '//Heart rate in beats per minute
-dim sensLoc                 '//heart sensor location
-dim sensCntct               '//heart sensor sensor contact status on/off
-dim hrs$ as string          '//hrs measurement attribute
-dim hRing                   '//handle for the rr ring buffer
+dim hrtRate                 //Heart rate in beats per minute
+dim sensLoc                 //Heart sensor location
+dim sensCntct               //Heart sensor sensor contact status on/off
+dim hrs$ as string          //hrs measurement attribute
+dim hRing                   //Handle for the rr ring buffer
 
-'//******************************************************************************
-'// Initialisse Global Variable
-'//******************************************************************************
+//******************************************************************************
+// Initialisse Global Variable
+//******************************************************************************
 
 hrtRate         = 0
 sensLoc         = BLE_HRS_BODY_SENSOR_LOCATION_CHEST
 sensCntct       = 1
 
-'//******************************************************************************
-'// Function and Subroutine definitions
-'//******************************************************************************
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
 
-'//******************************************************************************
-'// Register Error Handler as early as possible
-'//******************************************************************************
+//******************************************************************************
+// Register Error Handler as early as possible
+//******************************************************************************
 
-'//==============================================================================
-'// data to encode is in hrtRate,sensCntct,hRing
-'//==============================================================================
+//==============================================================================
+// data to encode is in hrtRate,sensCntct,hRing
+//==============================================================================
 sub HrsEncode()
   dim rc
   dim itms
@@ -88,32 +101,32 @@ sub HrsEncode()
   rc = CircBufItems(hRing,itms)
 
   if hrtRate < 256 then
-    //only one byte to encode
+    //Only one byte to encode
     encsz = (itms*2) + 2
   else
-    //two bytes to encode
+    //Two bytes to encode
     encsz = (itms*2) + 3
-    //heart rate is in 2 bytes
+    //Heart rate is in 2 bytes
     flgs  = flgs | 0x01
   endif
 
-  //update the sensor contact info
+  //Update the sensor contact info
   if sensCntct then
     flgs  = flgs | 0x06
   else
     flgs  = flgs | 0x04
   endif
 
-  //update the rrInfo bit
+  //Update the rrInfo bit
   if itms then
     flgs  = flgs | 0x10
   endif
 
-  //create the attribute buffer space
+  //Create the attribute buffer space
   rc= StrFill(hrs$,0,encsz)
   //Save the flags field
   rc = BleEncode8(hrs$,flgs,0)
-  //save the heart rate info
+  //Save the heart rate info
   if hrtRate < 256 then
     rc = BleEncode8(hrs$,hrtRate,1)
     ndx = 2
@@ -121,7 +134,7 @@ sub HrsEncode()
     rc = BleEncode16(hrs$,hrtRate,1)
     ndx = 3
   endif
-  //save the rrInfo if there is any
+  //Save the rrInfo if there is any
   while (itms)
     rc = CircBufRead(hRing,rr)
     rc = BleEncode16(hrs$,rr,ndx)
@@ -132,8 +145,8 @@ sub HrsEncode()
 
 endsub
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function AddCharHrsMeas() as integer
   dim rc
 
@@ -219,8 +232,8 @@ function AddCharHrsMeas() as integer
 endfunc rc
 
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function AddCharHrsSensLoc() as integer
   dim rc
 
@@ -307,13 +320,13 @@ function AddCharHrsSensLoc() as integer
 endfunc rc
 
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function RegHrsService() as integer
   dim rc
 
   //----------------------------------------------------------------------------
-  //Create a Heart Rate PRIMARY service attribure which has a uuid of 0x180D
+  // Create a Heart Rate PRIMARY service attribure which has a uuid of 0x180D
   //----------------------------------------------------------------------------
   rc = BleSvcCommit(BLE_SERVICE_PRIMARY,BleHandleUuid16(0x180D),shHrs)
   AssertResCode(rc,9100)
@@ -333,16 +346,16 @@ function RegHrsService() as integer
 endfunc rc
 
 
-'//==============================================================================
-'// snsloc is an integer as follows:-
-'//   0   Other
-'//   1   chest
-'//   2   wrist
-'//   3   finger
-'//   4   hand
-'//   5   ear Lobe
-'//   6   foot
-'//==============================================================================
+//==============================================================================
+// snsloc is an integer as follows:-
+//   0   Other
+//   1   chest
+//   2   wrist
+//   3   finger
+//   4   hand
+//   5   ear Lobe
+//   6   foot
+//==============================================================================
 sub InitHrsService()
   dim rc
 
@@ -358,9 +371,9 @@ sub InitHrsService()
 
 endsub
 
-'//==============================================================================
-'// will return 0 if successfully sent
-'//==============================================================================
+//==============================================================================
+// Will return 0 if successfully sent
+//==============================================================================
 function SendHrData() as integer
   dim rc
   //rc = BleSvcSetHeartRate(hrtRate,sensCntct)
@@ -371,14 +384,14 @@ function SendHrData() as integer
 endfunc rc
 
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function AddRrData(rrInt as integer) as integer
   dim rc
   if (rrInt>=0)&&(rrInt<=65535) then
     rc=CircBufOverWrite(hRing,rrInt)
     if rc==0x5103 then
-      //the buffer was full, so change value that regression test is expecting
+      //The buffer was full, so change value that regression test is expecting
       // **** customer is not expected to do this
       rc=0x6029
     endif
@@ -389,13 +402,13 @@ function AddRrData(rrInt as integer) as integer
 endfunc rc
 
 
-'//******************************************************************************
-'// Handler definitions
-'//******************************************************************************
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
 
-'//==============================================================================
-'// MUST be called from the BLE message handler
-'//==============================================================================
+//==============================================================================
+// MUST be called from the BLE message handler
+//==============================================================================
 sub HrsOnBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER)
   //dim rc
   //select nMsgId
@@ -405,11 +418,7 @@ sub HrsOnBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER)
 endsub
 
 
-
-
-'//******************************************************************************
-'// Other initialisations
-'//******************************************************************************
-
-
+//******************************************************************************
+// Other initialisations
+//******************************************************************************
 

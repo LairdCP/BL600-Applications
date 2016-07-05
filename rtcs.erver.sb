@@ -1,52 +1,65 @@
- //******************************************************************************
- // Laird Technologies (c) 2014-2015
- //
- // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- // +++++                                                                      ++
- // +++++  When UwTerminal downloads the app it will store it as a filenname   ++
- // +++++  which consists of all characters up to the first . and excluding it ++
- // +++++                                                                      ++
- // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- //
- // BL600 custom Real Time Clock (RTC) Service
- //       This sample application implements the BLE RTC service with 
- //       characteristics to allow setting the time remotely.
- //
- // Please note that this requires an external MCP79410 or compatible RTC chip
- //       connected to the BL600 I2C lines (it is not provided on the BL600-DVK)
- //
- // This is a cut-down version of the BT900 RTC server sample application and
- //       does not feature the alarm or buzzer functionality.
- //
- //******************************************************************************
- //
- // -> Sends BLE adverts with time from RTC
- // -> Allows remote time setting
- //
+// Copyright (c) 2015, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// +++++                                                                      ++
+// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+// +++++  which consists of all characters up to the first . and excluding it ++
+// +++++                                                                      ++
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// BL600 custom Real Time Clock (RTC) Service
+//       This sample application implements the BLE RTC service with 
+//       characteristics to allow setting the time remotely.
+//
+// Please note that this requires an external MCP79410 or compatible RTC chip
+//       connected to the BL600 I2C lines (it is not provided on the BL600-DVK)
+//
+// This is a cut-down version of the BT900 RTC server sample application and
+//       does not feature the alarm or buzzer functionality.
+//
+//******************************************************************************
+//
+// -> Sends BLE adverts with time from RTC
+// -> Allows remote time setting
+//
 
 #DEFINE BLE_SERVICE_SECONDARY                           0
 #DEFINE BLE_SERVICE_PRIMARY                             1
 
-dim rc //Result code
-dim I2Ch //I2C Handle
-DIM Service1 //composite handle for hts primary service
-DIM Service1UUID : Service1UUID = BleHandleUuid16(0x1805) //HT Svc UUID Handle, 0x1805 for current time service
-DIM Char1 //Characteristic 1 (Current time)
-DIM Char2 //Characteristic 2 (Local time)
-DIM Char3 //Characteristic 3 (Reference time)
-DIM Char4 //Characteristic 4 (Version)
-DIM Timezone : Timezone = 0 //Hours off from UTC, see https://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.time_zone.xml
-DIM DST : DST = 0 //0 for no DST, 4 for +1 hour DST, see https://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.dst_offset.xml
-DIM SendNotify : SendNotify = 0 //Set to 1 when notifications are enabled
+dim rc                                                     //Result code
+dim I2Ch                                                   //I2C Handle
+DIM Service1                                               //Composite handle for hts primary service
+DIM Service1UUID : Service1UUID = BleHandleUuid16(0x1805)  //HT Svc UUID Handle, 0x1805 for current time service
+DIM Char1                                                  //Characteristic 1 (Current time)
+DIM Char2                                                  //Characteristic 2 (Local time)
+DIM Char3                                                  //Characteristic 3 (Reference time)
+DIM Char4                                                  //Characteristic 4 (Version)
+DIM Timezone : Timezone = 0                                //Hours off from UTC, see https://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.time_zone.xml
+DIM DST : DST = 0                                          //0 for no DST, 4 for +1 hour DST, see https://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.dst_offset.xml
+DIM SendNotify : SendNotify = 0                            //Set to 1 when notifications are enabled
 dim APP_VERSION$ : APP_VERSION$ = "0.92"
-dim I2CSpeed : I2CSpeed = 250000 //250KHz
-dim RTCAddr : RTCAddr = 111 //I2C Address of RTC
-dim AdjustReason : AdjustReason = 0 //Reason for last time adjustment
-dim DayOfWeek : DayOfWeek = 0 //The current day of the week (0 = unknown)
+dim I2CSpeed : I2CSpeed = 250000                           //250KHz
+dim RTCAddr : RTCAddr = 111                                //I2C Address of RTC
+dim AdjustReason : AdjustReason = 0                        //Reason for last time adjustment
+dim DayOfWeek : DayOfWeek = 0                              //The current day of the week (0 = unknown)
 
-'//******************************************************************************
-'// Command success handler
-'//******************************************************************************
+//******************************************************************************
+// Command success handler
+//******************************************************************************
 SUB AssertRC(rc,ln)   
     IF rc!=0 THEN
         PRINT "\nFail :";integer.h' rc;" at tag ";ln
@@ -340,9 +353,9 @@ BTAddr$ = SysInfo$(4)
 PRINT "\nrtcs.erver running with Bluetooth address: ";STRHEXIZE$(BTAddr$);"\nNow accepting connections...\n\n"
 
 //Events
-ONEVENT EVTMR0 CALL HndlrTmr0 //Runs when timer0 expires
-ONEVENT EVBLEMSG CALL BleEvent //Runs on BLE event
-ONEVENT EVCHARCCCD CALL HndlrCharCccd //Runs when CCCD is written
-ONEVENT EVCHARVAL CALL HndlrCharVal //Runs when characteristic is written
+ONEVENT EVTMR0 CALL HndlrTmr0          //Runs when timer0 expires
+ONEVENT EVBLEMSG CALL BleEvent         //Runs on BLE event
+ONEVENT EVCHARCCCD CALL HndlrCharCccd  //Runs when CCCD is written
+ONEVENT EVCHARVAL CALL HndlrCharVal    //Runs when characteristic is written
 
 WAITEVENT

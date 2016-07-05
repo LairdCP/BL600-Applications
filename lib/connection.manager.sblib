@@ -1,39 +1,52 @@
-'//******************************************************************************
-'// Laird Technologies (c) 2013
-'//
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'// ######                                                                #######
-'// ######        Library File meant to be #included in files             #######
-'// ######                                                                #######
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'//
-'// This library contains contains the connection manager and should be
-'// #included in your app
-'//
-'//******************************************************************************
+// Copyright (c) 2013, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// ######                                                                #######
+// ######        Library File meant to be #included in files             #######
+// ######                                                                #######
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// This library contains contains the connection manager and should be
+// #included in your app
+//
+//******************************************************************************
 
-'//******************************************************************************
-'// Definitions
-'//******************************************************************************
+//******************************************************************************
+// Definitions
+//******************************************************************************
 
-'//******************************************************************************
-'// Library Import
-'//******************************************************************************
+//******************************************************************************
+// Library Import
+//******************************************************************************
 
-'//******************************************************************************
-'// Global Variable Declarations
-'//******************************************************************************
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
 
-dim minint          '// minimum interval range is 7500us to 4000000us
-dim maxint          '// minimum interval range is 7500us to 4000000us
-dim sprtout         '// link supervision timeout max value 32000000us
-dim slatncy         '// slave latency 0..N where N*Interval must be less than link
-                    '// supervision timeout
-dim hConn           '// connection handle
+dim minint          //Minimum interval range is 7500us to 4000000us
+dim maxint          //Minimum interval range is 7500us to 4000000us
+dim sprtout         //Link supervision timeout max value 32000000us
+dim slatncy         //Slave latency 0..N where N*Interval must be less than link
+                    //Supervision timeout
+dim hConn           //Connection handle
 
-'//******************************************************************************
-'// Initialise Global Variable
-'//******************************************************************************
+//******************************************************************************
+// Initialise Global Variable
+//******************************************************************************
 
 hConn   = BLE_CONN_HANDLE_INVALID
 minint  = MIN_CONN_INTERVAL
@@ -42,22 +55,22 @@ sprtout = CONN_SUP_TIMEOUT
 slatncy = SLAVE_LATENCY
 
 
-'//******************************************************************************
-'// Function and Subroutine definitions
-'//******************************************************************************
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
 
-'//==============================================================================
-'// hc is the handle of the connection to be dropped
-'//==============================================================================
+//==============================================================================
+// hc is the handle of the connection to be dropped
+//==============================================================================
 function Disconnect(hc as integer) as integer
   dim rc
   rc = BleDisconnect(hc)
   AssertResCode(rc,4100)
 endfunc rc
 
-'//==============================================================================
-'// hc is the handle of the connection to be dropped
-'//==============================================================================
+//==============================================================================
+// hc is the handle of the connection to be dropped
+//==============================================================================
 function ConnNewParms(hc as integer) as integer
   dim rc
   rc = BleSetCurConnParms(hc,minint,maxint,sprtout,slatncy)
@@ -65,9 +78,9 @@ function ConnNewParms(hc as integer) as integer
 endfunc rc
 
 
-'//==============================================================================
-'// MUST be called from the BLE message handler
-'//==============================================================================
+//==============================================================================
+// MUST be called from the BLE message handler
+//==============================================================================
 sub ConnMngrOnBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER)
   select nMsgId
   case BLE_EVBLEMSGID_CONNECT
@@ -82,13 +95,11 @@ sub ConnMngrOnBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER)
 endsub
 
 
-'//******************************************************************************
-'// Handler definitions
-'//******************************************************************************
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
 
-'//******************************************************************************
-'// Other initialisations
-'//******************************************************************************
-
-
+//******************************************************************************
+// Other initialisations
+//******************************************************************************
 

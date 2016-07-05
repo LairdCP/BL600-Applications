@@ -1,51 +1,64 @@
-'//******************************************************************************
-'// Laird Technologies (c) 2013
-'//
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'// ######                                                                #######
-'// ######        Library File meant to be #included in files             #######
-'// ######                                                                #######
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'//
-'// This library contains contains a fast/slow advert manager and should be
-'// #included in your app
-'//
-'//   Usage: (also see sample hrs.heart.rate.sb for more details)
-'//
-'//     (*) Call StartAdverts(...) from your code
-'//
-'//
-'//******************************************************************************
+// Copyright (c) 2013, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// ######                                                                #######
+// ######        Library File meant to be #included in files             #######
+// ######                                                                #######
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// This library contains contains a fast/slow advert manager and should be
+// #included in your app
+//
+//   Usage: (also see sample hrs.heart.rate.sb for more details)
+//
+//     (*) Call StartAdverts(...) from your code
+//
+//
+//******************************************************************************
 
-'//******************************************************************************
-'// Definitions
-'//******************************************************************************
+//******************************************************************************
+// Definitions
+//******************************************************************************
 
-'//******************************************************************************
-'// Library Import
-'//******************************************************************************
+//******************************************************************************
+// Library Import
+//******************************************************************************
 
-'//******************************************************************************
-'// Global Variable Declarations
-'//******************************************************************************
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
 
-dim advPhase                '//will be 0 if not advertising, 1 for fast adverts, 2 for slow adverts
-dim advState                '//will be 0 if not advertising, 1,2,3,4 for the four advert types
-dim advType                 '//as per ADV_ in ble.sblib
-dim addr$                   '//Peer address for Directed Adverts (MSB first) and exactly 6 bytes long
-dim advInt                  '//Adv interval in milliseconds in fast mode
-dim advIntS                 '//Adv interval in milliseconds in slow mode
-dim advTmout                '//Adv timeout in milliseconds in fast mode
-dim advTmoutS               '//Adv timeout in milliseconds in slow mode
-dim advFilPol               '//Adv filter policy - see ADV_FILTERPOLICY_xxx in blelib.sblib
-                            '// 0 = Any
-                            '// 1 = Filter Scan Request
-                            '// 2 = Filter Connection Request
-                            '// 3 = Both
+dim advPhase                //Will be 0 if not advertising, 1 for fast adverts, 2 for slow adverts
+dim advState                //Will be 0 if not advertising, 1,2,3,4 for the four advert types
+dim advType                 //As per ADV_ in ble.sblib
+dim addr$                   //Peer address for Directed Adverts (MSB first) and exactly 6 bytes long
+dim advInt                  //Adv interval in milliseconds in fast mode
+dim advIntS                 //Adv interval in milliseconds in slow mode
+dim advTmout                //Adv timeout in milliseconds in fast mode
+dim advTmoutS               //Adv timeout in milliseconds in slow mode
+dim advFilPol               //Adv filter policy - see ADV_FILTERPOLICY_xxx in blelib.sblib
+                            // 0 = Any
+                            // 1 = Filter Scan Request
+                            // 2 = Filter Connection Request
+                            // 3 = Both
 
-'//******************************************************************************
-'// Initialisse Global Variable
-'//******************************************************************************
+//******************************************************************************
+// Initialisse Global Variable
+//******************************************************************************
 
 advState  = 0
 advPhase  = 0
@@ -57,13 +70,13 @@ advTmout  = ADV_TIMEOUT_MS
 advTmoutS = ADV_TIMEOUT_SLOW_MS
 advFilPol = ADV_WHITELIST_FILTER_POLICY
 
-'//******************************************************************************
-'// Function and Subroutine definitions
-'//******************************************************************************
+//******************************************************************************
+// Function and Subroutine definitions
+//******************************************************************************
 
-'//==============================================================================
-'// returns 0 if parameters are acceptable
-'//==============================================================================
+//==============================================================================
+// returns 0 if parameters are acceptable
+//==============================================================================
 function SetAdvertType(byval adType as integer,byref ad$ as string) as integer
   if (adType>=ADV_IND)&&(adType<=ADV_NONCONN_IND) then
     if (adType==ADV_DIRECT_IND) then
@@ -77,13 +90,13 @@ function SetAdvertType(byval adType as integer,byref ad$ as string) as integer
   endif
 endfunc 0
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function GetAdvertState() as integer
 endfunc advState
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function SetAdvertInt(intvl as integer) as integer
   if intvl < 20 then
     exitfunc 0
@@ -96,8 +109,8 @@ function SetAdvertInt(intvl as integer) as integer
   advInt = intvl
 endfunc 1
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function SetAdvertIntS(intvl as integer) as integer
   if intvl < 20 then
     exitfunc 0
@@ -110,8 +123,8 @@ function SetAdvertIntS(intvl as integer) as integer
   advIntS = intvl
 endfunc 1
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function SetAdvertTout(inttm as integer) as integer
   if inttm < (advInt+20) then
     exitfunc 0
@@ -119,8 +132,8 @@ function SetAdvertTout(inttm as integer) as integer
   advTmout = inttm
 endfunc 1
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function SetAdvertToutS(inttm as integer) as integer
   if inttm < (advIntS+20) then
     exitfunc 0
@@ -128,8 +141,8 @@ function SetAdvertToutS(inttm as integer) as integer
   advTmoutS = inttm
 endfunc 1
 
-'//==============================================================================
-'//==============================================================================
+//==============================================================================
+//==============================================================================
 function SetAdvertFPol(fpol as integer) as integer
   if (fpol >= ADV_FILTERPOLICY_ANY)&&(fpol <= ADV_FILTERPOLICY_BOTH)then
     advFilPol = fpol
@@ -137,40 +150,40 @@ function SetAdvertFPol(fpol as integer) as integer
   endif
 endfunc 0
 
-'//==============================================================================
-'// Returns 0 if successful, otherwise appropriate error code
-'//==============================================================================
+//==============================================================================
+// Returns 0 if successful, otherwise appropriate error code
+//==============================================================================
 function StopAdverts() as integer
   dim rc
   rc=0
   if advState != 0 then
-    //currently advertising
+    //Currently advertising
     rc = BleAdvertStop()
     AssertResCode(rc,3000)
     if rc==0 then
-      //adverts stopped successfully
+      //Adverts stopped successfully
       advState=0
     endif
   endif
 endfunc rc
 
-'//==============================================================================
-'// -1 for the last valid type of advert that was sent
-'//  0 ADV_IND
-'//  1 ADV_DIRECT_IND
-'//  2 ADV_SCAN_IND
-'//  3 ADV_NONCONN_IND
-'//
-'// Returns 0 if successful, otherwise appropriate error code
-'//==============================================================================
+//==============================================================================
+// -1 for the last valid type of advert that was sent
+//  0 ADV_IND
+//  1 ADV_DIRECT_IND
+//  2 ADV_SCAN_IND
+//  3 ADV_NONCONN_IND
+//
+// Returns 0 if successful, otherwise appropriate error code
+//==============================================================================
 function StartAdverts(adv as integer) as integer
   dim rc
   if advState == 0 then
-    //currently not advertising
+    //Currently not advertising
     if adv == -1 then
       adv = advType
     elseif (adv<0)||(adv>3) then
-      //invalid advertising type
+      //Invalid advertising type
       rc=0xEF01
       AssertResCode(rc,3120)
       exitfunc rc
@@ -178,22 +191,22 @@ function StartAdverts(adv as integer) as integer
     rc = BleAdvertStart(adv,addr$,advInt,advTmout,advFilPol)
     AssertResCode(rc,3100)
     if rc==0 then
-      //adverts started successfully
+      //Adverts started successfully
       advType  = adv
       advState = advType + 1
       advPhase = 1
     endif
   else
-    //currently advertising
+    //Currently advertising
     rc=0xEF00
     AssertResCode(rc,3110)
   endif
 endfunc rc
 
 
-'//==============================================================================
-'// MUST be called from the BLE message handler
-'//==============================================================================
+//==============================================================================
+// MUST be called from the BLE message handler
+//==============================================================================
 sub AdvMngrOnBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER)
   dim rc
 
@@ -203,7 +216,7 @@ sub AdvMngrOnBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER)
     advPhase=0
 
   case BLE_EVBLEMSGID_DISCONNECT
-    '// restart advertising
+    // restart advertising
     rc=StartAdverts(-1)
     AssertResCode(rc,3200)
 
@@ -213,9 +226,9 @@ sub AdvMngrOnBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER)
 
 endsub
 
-'//==============================================================================
-'// Will return 0 if no longer advertising
-'//==============================================================================
+//==============================================================================
+// Will return 0 if no longer advertising
+//==============================================================================
 function AdvMngrOnAdvTimeOut() as integer
   dim rc
   advState = 0
@@ -234,15 +247,11 @@ function AdvMngrOnAdvTimeOut() as integer
 endfunc advState
 
 
+//******************************************************************************
+// Handler definitions
+//******************************************************************************
 
-
-'//******************************************************************************
-'// Handler definitions
-'//******************************************************************************
-
-'//******************************************************************************
-'// Other initialisations
-'//******************************************************************************
-
-
+//******************************************************************************
+// Other initialisations
+//******************************************************************************
 

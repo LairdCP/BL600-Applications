@@ -1,41 +1,54 @@
-'//******************************************************************************
-'// Laird Technologies (c) 2015
-'//
-'// dotstar.example.sb
-'//
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'// +++++                                                                      ++
-'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
-'// +++++  which consists of all characters up to the first . and excluding it ++
-'// +++++                                                                      ++
-'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-'//
-'// Example calls on DotStar API for smartBasic and performs a simple rainbow
-'//    snake on the strip.
-'//
-'// NOTE - The refresh rate of the DotStars may be limited by the processor's
-'//    speed to access pixel information. Less pixels, greater potential refresh
-'//    rate Will also very from smartBasic module to module.
-'//
-'//
-'//******************************************************************************
+// Copyright (c) 2015, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+//
+// dotstar.example.sb
+//
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// +++++                                                                      ++
+// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+// +++++  which consists of all characters up to the first . and excluding it ++
+// +++++                                                                      ++
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+// Example calls on DotStar API for smartBasic and performs a simple rainbow
+//    snake on the strip.
+//
+// NOTE - The refresh rate of the DotStars may be limited by the processor's
+//    speed to access pixel information. Less pixels, greater potential refresh
+//    rate Will also very from smartBasic module to module.
+//
+//
+//******************************************************************************
 
-'//******************************************************************************
-'// Definitions
-'//******************************************************************************
+//******************************************************************************
+// Definitions
+//******************************************************************************
 //Note that a maximum of 256 pixels are supported
-#DEFINE NUM_PIXELS            	150     //5 Meters of 30LEDs/m.
-#DEFINE LEN_OF_SNAKE           	15
-#DEFINE ENABLE_DEBUG_PRINTS     0  		//Set this to 1 to enable debug output
+#DEFINE NUM_PIXELS              150  //5 Meters of 30LEDs/m.
+#DEFINE LEN_OF_SNAKE            15
+#DEFINE ENABLE_DEBUG_PRINTS     0    //Set this to 1 to enable debug output
 
-'//******************************************************************************
-'// Library Import
-'//******************************************************************************
+//******************************************************************************
+// Library Import
+//******************************************************************************
 #include "lib/DotStar.sblib"
 
-'//******************************************************************************
-'// Global Variable Declarations
-'//******************************************************************************
+//******************************************************************************
+// Global Variable Declarations
+//******************************************************************************
 dim rc
 dim head, tail, r, g, b, color
 head = LEN_OF_SNAKE
@@ -44,9 +57,9 @@ r = 255
 g = 0
 b = 0
 
-'//------------------------------------------------------------------------------
-'// Main loop
-'//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Main loop
+//------------------------------------------------------------------------------
 FUNCTION HandleLoop()
     if (r == 255) && (g < 255)  && (b == 0) then
         g = g + 1
@@ -62,12 +75,12 @@ FUNCTION HandleLoop()
         b = b - 1
     endif
     
-    color = setDotStarPixelColor(head, r, g, b)        'Update head with new colors
-    color = setDotStarPixelColor(tail, 0, 0, 0)        'Have tail turn off.
-	
-	setDotStarBrightness(head % 32)
-    'print "\nr="; r; " g="; g; " b= "; b; " h="; head; " t="; tail
-	
+    color = setDotStarPixelColor(head, r, g, b)        //Update head with new colors
+    color = setDotStarPixelColor(tail, 0, 0, 0)        //Have tail turn off.
+    
+    setDotStarBrightness(head % 32)
+    //print "\nr="; r; " g="; g; " b= "; b; " h="; head; " t="; tail
+    
     DotStarUpdate()
     
     head = head + 1
@@ -79,24 +92,24 @@ FUNCTION HandleLoop()
     if(tail > NUM_PIXELS) then
         tail = 0
     endif
-	
+    
 ENDFUNC 1
 
-'//******************************************************************************
-'// Equivalent to main() in C
-'//******************************************************************************
-rc = DotStarBegin(NUM_PIXELS)    	'Initialize sB device to open SPI, and set chipSelect pin for DotStar.
+//******************************************************************************
+// Equivalent to main() in C
+//******************************************************************************
+rc = DotStarBegin(NUM_PIXELS)      //Initialize sB device to open SPI, and set chipSelect pin for DotStar.
 
 if rc == 0 then
-    DotStarClear()                	'Immediately turn off all LEDs
-    TimerStart(1, 20, 1)        	'50HZ update rate.
+    DotStarClear()                 //Immediately turn off all LEDs
+    TimerStart(1, 20, 1)           //50HZ update rate.
     
     ONEVENT EVTMR1     CALL HandleLoop
     
-    '//------------------------------------------------------------------------------
-    '// Wait for a synchronous event.
-    '// An application can have multiple <WaitEvent> statements
-    '//------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------
+    // Wait for a synchronous event.
+    // An application can have multiple <WaitEvent> statements
+    //------------------------------------------------------------------------------
     waitevent
 else
     print "\nDotStarBegin() failed\n"

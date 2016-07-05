@@ -1,3 +1,19 @@
+// Copyright (c) 2016, Laird
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+// IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// SPDX-License-Identifier:ISC
+
 //******************************************************************************
 // Laird Technologies (c) 2013
 //
@@ -43,23 +59,23 @@
 
 //-------------------------------------------
 //TODO - Uncomment one of the following three lines
-//TODO #define SYSID                              "\01\02\03\04\05\06\07\08"
+//TODO #define SYSID                         "\01\02\03\04\05\06\07\08"
 #define SYSID                                ""
 //-------------------------------------------
 
 //-------------------------------------------
 //TODO - Uncomment one of the following two lines
-//#define REGLIST                              "\DE\AD\C0\DE"
+//#define REGLIST                            "\DE\AD\C0\DE"
 #define REGLIST                              ""
 //-------------------------------------------
 
 //-------------------------------------------
 //TODO - Uncomment one of the following two lines
-//#define PNPID                                "\01\04\BF\03\20\00\01"
+//#define PNPID                              "\01\04\BF\03\20\00\01"
 #define PNPID                                ""
 //-------------------------------------------
 
-//#define CHAR_CR                              13
+//#define CHAR_CR                            13
 
 
         // Minimum acceptable connection interval (0.5 seconds)
@@ -138,5 +154,3 @@
 // An application can have multiple <WaitEvent> statements
 //------------------------------------------------------------------------------
 WaitEvent
-
-
