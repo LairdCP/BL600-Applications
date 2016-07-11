@@ -112,10 +112,10 @@ onerror next HandlerOnErr
 #include "lib\device.information.service.sblib"
 
 //Uncomment following line to add battery service
-//TODO #include "lib\battery.service.sblib"
+//TODO #include "lib\custom.battery.service.sblib"
 
 //Add services as appropriate
-//TODO #include "lib\blood.pressure.service.sblib"
+//TODO #include "lib\custom.blood.pressure.service.sblib"
 
 //******************************************************************************
 // Debugging resource after libs

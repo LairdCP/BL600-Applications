@@ -109,8 +109,7 @@ onerror next HandlerOnErr
 #include "lib\gap.service.sblib"
 #include "lib\device.information.service.sblib"
 
-//#include "lib\custom.battery.service.sblib"
-#include "lib\battery.service.sblib"
+#include "lib\custom.battery.service.sblib"
 
 
 //******************************************************************************
