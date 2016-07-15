@@ -2,33 +2,31 @@
 
 DIM hMyChar,rc,at$,conHndl
 
-
 //==============================================================================
 // Initialise and instantiate service, characteristic, start adverts
 //==============================================================================
 FUNCTION OnStartup()
     DIM rc, hSvc, at$, attr$, adRpt$, addr$, scRpt$ , rc2  
     attr$="Hi"
-    DIM charMet : charMet = BleAttrMetaData(1,1,20,0,rc)
-    
+    DIM charMet : charMet = BleAttrMetaDataex(1,1,20,0,rc)
+
     //Commit svc with handle 'hSvcUuid'
     rc=BleServiceNew(1,BleHandleUuid16(0x18EE),hSvc)            
-    //initialise char, read enabled, accept signed writes, broadcast capable
-    rc=BleCharNew(0x4B,BleHandleUuid16(1),charMet,0,BleAttrMetadata(1,1,2,8,rc2))     
-    //commit char initialised above, with initial value "hi" to service 'hMyChar'
+    //Initialise char, read enabled, accept signed writes, broadcast capable
+    rc=BleCharNew(0x4B,BleHandleUuid16(1),charMet,0,BleAttrMetadataex(1,1,2,8,rc2))
+    //Commit char initialised above, with initial value "hi" to service 'hMyChar'
     rc=BleCharCommit(hSvc,attr$,hMyChar)
     //Commit svc
-    rc=BleServiceCommit(hSvc)            
-    
+    rc=BleServiceCommit(hSvc)
+
     rc=BleAdvRptInit(adRpt$,0x02,0,20) 
     //Add 'hSvc' and 'hMyChar' to the advert report
     rc=BleAdvRptAddUuid16(adRpt$,hSvc,hMyChar,-1,-1,-1,-1)
-    //commit reports to GATT table - adRpt$ is empty
+    //Commit reports to GATT table - adRpt$ is empty
     rc=BleAdvRptsCommit(adRpt$,scRpt$)
     rc=BleAdvertStart(0,addr$,20,300000,0)
     rc=GpioBindEvent(1,16,1)     //Channel 1, bind to low transition on GPIO pin 16
 ENDFUNC rc
-
 
 //==============================================================================
 // Close connections so that we can run another app without problems
@@ -52,7 +50,6 @@ FUNCTION HndlrBleMsg(BYVAL nMsgId, BYVAL nCtx)
     ENDIF
 ENDFUNC 1
 
-
 //==============================================================================
 //handler to service button 0 pressed
 //==============================================================================
@@ -60,28 +57,29 @@ FUNCTION HndlrBtn0Pr() AS INTEGER
     CloseConnections()
 ENDFUNC 1
 
-
 //==============================================================================
 // CCCD descriptor written handler
 //==============================================================================
 FUNCTION HndlrAuthSccd(BYVAL connHandle,BYVAL charHandle, BYVAL readWrite) AS INTEGER
     DIM value$
+
     IF charHandle==hMyChar THEN
-        IF nVal & 0x01 THEN
-            PRINT "\nBroadcasts have been enabled by client"  
-        ELSE
-            PRINT "\nBroadcasts have been disabled by client"
+        IF readWrite != 0x0 THEN
+            rc=BleAuthorizeDesc(connHandle,charHandle, -2 ,3)  //grant access
+            if readWrite == 0x10000 then
+                PRINT "\nBroadcasts have been disabled by client"
+            ELSE
+                PRINT "\nBroadcasts have been enabled by client"
+            endif
         ENDIF
     ELSE
         PRINT "\nThis is for some other characteristic"
     ENDIF
 ENDFUNC 1
 
-
 ONEVENT  EVBLEMSG    CALL HndlrBleMsg
-ONEVENT  EVCHARSCCD  CALL HndlrCharSccd
+ONEVENT  EVAUTHSCCD  CALL HndlrAuthSccd
 ONEVENT  EVGPIOCHAN1 CALL HndlrBtn0Pr 
-
 
 IF OnStartup()==0 THEN
     rc = BleCharValueRead(hMyChar,at$)
@@ -92,7 +90,6 @@ IF OnStartup()==0 THEN
 ELSE
     PRINT "\nFailure OnStartup"
 ENDIF
-
 
 WAITEVENT
 
