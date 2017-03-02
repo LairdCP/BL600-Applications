@@ -325,6 +325,10 @@ function HandlerBleMsg(BYVAL nMsgId AS INTEGER, BYVAL nCtx AS INTEGER) as intege
 
   case BLE_EVBLEMSGID_DISCONNECT
     DbgMsgVal(" --- Disconnect : ",nCtx)
+    //Flush uart RX buffer so that local RTS is asserted
+    UartFlush(1)
+    //Flush VSP TX buffer so that we can send more data
+    BleVspFlush(2)
 
   case BLE_EVBLEMSGID_IMMEDIATE_ALERT_SERVICE_ALERT
     DbgMsgVal( "\n --- Immediate Alert Service Alert ", nCtx)
